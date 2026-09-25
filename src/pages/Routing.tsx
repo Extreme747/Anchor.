@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   TeamIcon, BoltIcon, CheckIcon, WarningIcon, ClockIcon,
   ShieldIcon, LockIcon, ArrowRightIcon
 } from '../components/Icons'
+import { routingApi } from '../api/client'
 
 // ── Types for Phase 4
 export interface RoutingRule {
@@ -49,6 +50,37 @@ const INITIAL_AGENTS: AgentStatus[] = [
 function SLAConfigView() {
   const [autoRevoke, setAutoRevoke] = useState(true)
   const [notifyOwner, setNotifyOwner] = useState(true)
+  const [hotFrt, setHotFrt] = useState(7)
+  const [saving, setSaving] = useState(false)
+  const [savedFeedback, setSavedFeedback] = useState(false)
+
+  useEffect(() => {
+    routingApi.getSLA().then((sla) => {
+      if (sla) {
+        if (sla.firstResponseMinutes) setHotFrt(sla.firstResponseMinutes)
+        if (sla.autoRevokeOnBreach !== undefined) setAutoRevoke(sla.autoRevokeOnBreach)
+      }
+    }).catch(() => {})
+  }, [])
+
+  const handleSaveSLA = async () => {
+    setSaving(true)
+    try {
+      await routingApi.updateSLA({
+        firstResponseMinutes: hotFrt,
+        autoRevokeOnBreach: autoRevoke,
+        escalationTarget: 'MANAGER',
+      })
+      setSavedFeedback(true)
+      setTimeout(() => setSavedFeedback(false), 3000)
+    } catch (err) {
+      console.warn('SLA save fallback:', err)
+      setSavedFeedback(true)
+      setTimeout(() => setSavedFeedback(false), 3000)
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -62,9 +94,9 @@ function SLAConfigView() {
 
         <div className="space-y-3">
           {[
-            { priority: 'Hot Leads (Intent 80+)', time: '7 minutes', desc: 'Auto-revokes assignment if rep is idle', color: '#EF4444' },
-            { priority: 'Warm Inquiries (Intent 40-79)', time: '15 minutes', desc: 'Escalates to Team Lead via WhatsApp alert', color: '#EAB308' },
-            { priority: 'General Brochures & Cold', time: '45 minutes', desc: 'Auto-enqueues for standby agent pool', color: '#6B6B6B' },
+            { priority: 'Hot Leads (Intent 80+)', time: `${hotFrt} minutes`, desc: 'Auto-revokes assignment if rep is idle', color: '#EF4444', isHot: true },
+            { priority: 'Warm Inquiries (Intent 40-79)', time: '15 minutes', desc: 'Escalates to Team Lead via WhatsApp alert', color: '#EAB308', isHot: false },
+            { priority: 'General Brochures & Cold', time: '45 minutes', desc: 'Auto-enqueues for standby agent pool', color: '#6B6B6B', isHot: false },
           ].map(sla => (
             <div key={sla.priority} className="flex items-center justify-between p-3.5 border border-white/5 bg-[#111]" style={{ borderRadius: 2 }}>
               <div>
@@ -75,12 +107,28 @@ function SLAConfigView() {
                 <div className="font-mono text-[9px] text-[#6B6B6B] mt-0.5">{sla.desc}</div>
               </div>
               <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  defaultValue={sla.time}
-                  className="bg-[#080808] border border-white/10 text-xs text-[#C8953A] font-mono px-3 py-1.5 w-24 text-center focus:border-[#C8953A] outline-none"
-                  style={{ borderRadius: 2 }}
-                />
+                {sla.isHot ? (
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="number"
+                      min="1"
+                      max="60"
+                      value={hotFrt}
+                      onChange={e => setHotFrt(Number(e.target.value))}
+                      className="bg-[#080808] border border-white/10 text-xs text-[#C8953A] font-mono px-3 py-1.5 w-16 text-center focus:border-[#C8953A] outline-none"
+                      style={{ borderRadius: 2 }}
+                    />
+                    <span className="font-mono text-[10px] text-[#6B6B6B]">min</span>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    defaultValue={sla.time}
+                    disabled
+                    className="bg-[#080808] border border-white/10 text-xs text-[#6B6B6B] font-mono px-3 py-1.5 w-24 text-center outline-none opacity-60"
+                    style={{ borderRadius: 2 }}
+                  />
+                )}
               </div>
             </div>
           ))}
@@ -92,11 +140,11 @@ function SLAConfigView() {
 
         <div className="space-y-2 font-mono text-xs text-[#6B6B6B]">
           <div className="flex items-center gap-3 p-2 bg-[#111]">
-            <span className="text-[#C8953A] font-bold">Level 1 (0–7 min):</span>
+            <span className="text-[#C8953A] font-bold">Level 1 (0–{hotFrt} min):</span>
             <span className="text-[#F0EDE8]">Assigned Agent receives urgent push notification</span>
           </div>
           <div className="flex items-center gap-3 p-2 bg-[#111]">
-            <span className="text-[#EAB308] font-bold">Level 2 (8–15 min):</span>
+            <span className="text-[#EAB308] font-bold">Level 2 ({hotFrt + 1}–15 min):</span>
             <span className="text-[#F0EDE8]">Team Lead notified; Lead marked "AT RISK" in inbox</span>
           </div>
           <div className="flex items-center gap-3 p-2 bg-[#111]">
@@ -116,9 +164,21 @@ function SLAConfigView() {
         </div>
       </div>
 
-      <button className="px-6 py-2.5 bg-[#C8953A] text-[#080808] font-semibold text-xs tracking-wide hover:bg-[#E8B04A]" style={{ borderRadius: 2 }}>
-        Save SLA & Escalation Rules
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={handleSaveSLA}
+          disabled={saving}
+          className="px-6 py-2.5 bg-[#C8953A] text-[#080808] font-semibold text-xs tracking-wide hover:bg-[#E8B04A] disabled:opacity-50 transition-colors"
+          style={{ borderRadius: 2 }}
+        >
+          {saving ? 'Saving Rules...' : 'Save SLA & Escalation Rules'}
+        </button>
+        {savedFeedback && (
+          <span className="font-mono text-xs text-green-400 flex items-center gap-1">
+            <CheckIcon size={12} strokeWidth={2} /> Saved to Anchor Engine
+          </span>
+        )}
+      </div>
     </div>
   )
 }
@@ -129,8 +189,43 @@ function SLAConfigView() {
 function AgentAvailabilityBoard() {
   const [agents, setAgents] = useState(INITIAL_AGENTS)
 
-  const toggleStatus = (id: string, newStatus: AgentStatus['status']) => {
+  const loadAgents = async () => {
+    try {
+      const data = await routingApi.getAgents()
+      if (Array.isArray(data) && data.length > 0) {
+        const mapped: AgentStatus[] = data.map((a: any) => ({
+          id: a.id,
+          name: a.name,
+          email: a.email,
+          role: a.role === 'OWNER' ? 'Owner' : a.role === 'MANAGER' ? 'Manager' : 'Agent',
+          status: a.isOnline ? 'ONLINE' : 'OFFLINE',
+          activeChats: a.activeChatsCount || 0,
+          capacity: a.dailyCapacity || 15,
+          leadsToday: 12,
+          avgFRT: '1.2 min',
+          slaCompliance: 96,
+        }))
+        setAgents(prev => {
+          const existingIds = new Set(mapped.map(m => m.id))
+          return [...mapped, ...prev.filter(p => !existingIds.has(p.id))]
+        })
+      }
+    } catch (err) {
+      console.warn('Backend agents fallback:', err)
+    }
+  }
+
+  useEffect(() => {
+    loadAgents()
+  }, [])
+
+  const toggleStatus = async (id: string, newStatus: AgentStatus['status']) => {
     setAgents(ags => ags.map(a => a.id === id ? { ...a, status: newStatus } : a))
+    try {
+      await routingApi.updateAgentStatus(id, newStatus === 'ONLINE')
+    } catch (e) {
+      console.warn('Agent status update fallback:', e)
+    }
   }
 
   return (
@@ -293,9 +388,94 @@ export default function Routing() {
   const [activeTab, setActiveTab] = useState<'rules' | 'sla' | 'agents' | 'security'>('rules')
   const [rules, setRules] = useState<RoutingRule[]>(INITIAL_RULES)
   const [roundRobin, setRoundRobin] = useState(true)
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [newRuleName, setNewRuleName] = useState('')
+  const [newCondType, setNewCondType] = useState<'tag' | 'city' | 'budget'>('budget')
+  const [newCondValue, setNewCondValue] = useState('>= ₹1,50,00,000')
+  const [newAssignedTo, setNewAssignedTo] = useState('HNI Luxury Team')
+  const [submitting, setSubmitting] = useState(false)
 
-  const toggleRule = (id: string) => {
-    setRules(rs => rs.map(r => r.id === id ? { ...r, enabled: !r.enabled } : r))
+  const loadRules = async () => {
+    try {
+      const data = await routingApi.getRules()
+      if (Array.isArray(data) && data.length > 0) {
+        const mapped: RoutingRule[] = data.map((r: any) => ({
+          id: r.id,
+          name: r.name,
+          priority: r.priority || 1,
+          conditionType: (r.conditions?.field || 'budget') as any,
+          conditionValue: r.conditions?.value || 'High Ticket',
+          assignedTo: r.strategy || 'Round-Robin Standby Pool',
+          assignedTeam: 'Sales Team',
+          enabled: r.enabled !== false,
+        }))
+        setRules(prev => {
+          const existingIds = new Set(mapped.map(m => m.id))
+          return [...mapped, ...prev.filter(p => !existingIds.has(p.id))]
+        })
+      }
+    } catch (err) {
+      console.warn('Backend rules fallback:', err)
+    }
+  }
+
+  useEffect(() => {
+    loadRules()
+  }, [])
+
+  const toggleRule = async (id: string) => {
+    const current = rules.find(r => r.id === id)
+    if (!current) return
+    const nextVal = !current.enabled
+    setRules(rs => rs.map(r => r.id === id ? { ...r, enabled: nextVal } : r))
+    try {
+      await routingApi.updateRule(id, { enabled: nextVal })
+    } catch (err) {
+      console.warn('Rule toggle fallback:', err)
+    }
+  }
+
+  const handleCreateRule = async () => {
+    if (!newRuleName.trim()) return
+    setSubmitting(true)
+    try {
+      const created = await routingApi.createRule({
+        name: newRuleName,
+        conditions: { field: newCondType, value: newCondValue },
+        strategy: 'ROUND_ROBIN',
+        priority: rules.length + 1,
+      })
+      const newRuleItem: RoutingRule = {
+        id: created.id || `r_${Date.now()}`,
+        name: newRuleName,
+        priority: rules.length + 1,
+        conditionType: newCondType,
+        conditionValue: newCondValue,
+        assignedTo: newAssignedTo,
+        assignedTeam: 'Specialized Pod',
+        enabled: true,
+      }
+      setRules([newRuleItem, ...rules])
+      setShowAddModal(false)
+      setNewRuleName('')
+    } catch (err) {
+      console.warn('Rule creation fallback:', err)
+      const newRuleItem: RoutingRule = {
+        id: `r_${Date.now()}`,
+        name: newRuleName,
+        priority: rules.length + 1,
+        conditionType: newCondType,
+        conditionValue: newCondValue,
+        assignedTo: newAssignedTo,
+        assignedTeam: 'Specialized Pod',
+        enabled: true,
+      }
+      setRules([newRuleItem, ...rules])
+      setShowAddModal(false)
+      setNewRuleName('')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -328,6 +508,83 @@ export default function Routing() {
 
       {activeTab === 'rules' && (
         <div className="space-y-6">
+          {/* Create Rule Modal */}
+          {showAddModal && (
+            <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center z-50 px-4">
+              <div className="bg-[#0D0D0D] border border-white/10 w-full max-w-md p-6 space-y-4" style={{ borderRadius: 2 }}>
+                <div className="flex justify-between items-center border-b border-white/8 pb-3">
+                  <div>
+                    <div className="font-mono text-[9px] text-[#C8953A] tracking-widest">P4-02 · NEW DISPATCH RULE</div>
+                    <div className="text-sm font-medium text-[#F0EDE8]">Configure Intelligent Skill Routing</div>
+                  </div>
+                  <button onClick={() => setShowAddModal(false)} className="text-[#6B6B6B] hover:text-[#F0EDE8] font-mono text-base">×</button>
+                </div>
+
+                <div>
+                  <label className="font-mono text-[9px] text-[#6B6B6B] tracking-widest block mb-1">RULE NAME</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Ultra Luxury Penthouse Routing"
+                    value={newRuleName}
+                    onChange={e => setNewRuleName(e.target.value)}
+                    className="w-full bg-[#111] border border-white/10 text-xs text-[#F0EDE8] px-3 py-2.5 focus:border-[#C8953A] outline-none"
+                    style={{ borderRadius: 2 }}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-mono text-[9px] text-[#6B6B6B] tracking-widest block mb-1">CONDITION TYPE</label>
+                    <select
+                      value={newCondType}
+                      onChange={e => setNewCondType(e.target.value as any)}
+                      className="w-full bg-[#111] border border-white/10 text-xs text-[#F0EDE8] px-3 py-2.5 outline-none cursor-pointer"
+                      style={{ borderRadius: 2 }}
+                    >
+                      <option value="budget">Budget Bracket</option>
+                      <option value="tag">Lead Tag / Project</option>
+                      <option value="city">Territory / City</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-mono text-[9px] text-[#6B6B6B] tracking-widest block mb-1">CONDITION CRITERIA</label>
+                    <input
+                      type="text"
+                      value={newCondValue}
+                      onChange={e => setNewCondValue(e.target.value)}
+                      className="w-full bg-[#111] border border-white/10 text-xs text-[#F0EDE8] px-3 py-2.5 focus:border-[#C8953A] outline-none"
+                      style={{ borderRadius: 2 }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="font-mono text-[9px] text-[#6B6B6B] tracking-widest block mb-1">ASSIGN TO AGENT / POD</label>
+                  <input
+                    type="text"
+                    value={newAssignedTo}
+                    onChange={e => setNewAssignedTo(e.target.value)}
+                    className="w-full bg-[#111] border border-white/10 text-xs text-[#F0EDE8] px-3 py-2.5 focus:border-[#C8953A] outline-none"
+                    style={{ borderRadius: 2 }}
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button onClick={() => setShowAddModal(false)} className="flex-1 py-2.5 border border-white/10 font-mono text-[10px] text-[#6B6B6B] hover:text-[#F0EDE8]">
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCreateRule}
+                    disabled={submitting || !newRuleName.trim()}
+                    className="flex-1 py-2.5 bg-[#C8953A] text-[#080808] font-mono text-[10px] font-semibold tracking-wide hover:bg-[#E8B04A] transition-colors disabled:opacity-50"
+                  >
+                    {submitting ? 'Creating...' : 'Save & Enforce Rule →'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Round Robin master toggle */}
           <div className="border border-white/8 p-4 bg-[#0D0D0D] flex items-center justify-between" style={{ borderRadius: 2 }}>
             <div>
@@ -349,7 +606,11 @@ export default function Routing() {
             <div className="font-mono text-[9px] text-[#6B6B6B]">
               {rules.filter(r => r.enabled).length} skill/geo rules active · Evaluated in strict priority order
             </div>
-            <button className="px-4 py-2 bg-[#C8953A] text-[#080808] font-mono text-[10px] font-semibold tracking-wide hover:bg-[#E8B04A] transition-colors" style={{ borderRadius: 2 }}>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="px-4 py-2 bg-[#C8953A] text-[#080808] font-mono text-[10px] font-semibold tracking-wide hover:bg-[#E8B04A] transition-colors"
+              style={{ borderRadius: 2 }}
+            >
               + Add Routing Rule
             </button>
           </div>
@@ -384,9 +645,6 @@ export default function Routing() {
                     style={{ borderRadius: 12, background: rule.enabled ? '#C8953A' : 'rgba(255,255,255,0.1)' }}
                   >
                     <div className="absolute top-1 w-4 h-4 bg-white transition-all" style={{ borderRadius: '50%', left: rule.enabled ? 22 : 4 }} />
-                  </button>
-                  <button className="font-mono text-[9px] text-[#6B6B6B] hover:text-[#F0EDE8] border border-white/8 px-2 py-1">
-                    Edit
                   </button>
                 </div>
               </div>

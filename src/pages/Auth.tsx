@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from '../router'
 import { AnchorIcon, LockIcon, BoltIcon, CheckIcon, ArrowRightIcon } from '../components/Icons'
 
+import { authApi } from '../api/client'
+
 // ── Shared input style
 const inp = 'w-full bg-[#111] border border-white/10 text-[#F0EDE8] text-sm px-4 py-3 placeholder-[#444] focus:outline-none focus:border-[#C8953A] transition-colors'
 
@@ -26,8 +28,30 @@ function AuthShell({ children, title, sub }: { children: React.ReactNode; title:
 function Login() {
   const { navigate } = useRouter()
   const [mode, setMode] = useState<'password' | 'otp'>('password')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [email, setEmail] = useState('arjun@anchor.io')
+  const [password, setPassword] = useState('anchor123')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    try {
+      await authApi.login(email, password)
+      navigate('dashboard')
+    } catch (err: any) {
+      setError(err.message || 'Login failed')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fillQuick = (e: string, p: string) => {
+    setEmail(e)
+    setPassword(p)
+    setError(null)
+  }
 
   return (
     <AuthShell title="Welcome back." sub="SIGN IN TO ANCHOR">
@@ -48,12 +72,18 @@ function Login() {
         ))}
       </div>
 
-      <form onSubmit={e => { e.preventDefault(); navigate('dashboard') }} className="space-y-3">
+      {error && (
+        <div className="mb-3 p-2.5 bg-red-500/10 border border-red-500/20 text-red-400 font-mono text-[10px]" style={{ borderRadius: 2 }}>
+          ⚠️ {error}
+        </div>
+      )}
+
+      <form onSubmit={handleLogin} className="space-y-3">
         <input
           style={{ borderRadius: 2 }}
           className={inp}
           type="email"
-          placeholder="Email or phone number"
+          placeholder="Email address"
           value={email}
           onChange={e => setEmail(e.target.value)}
           required
@@ -76,12 +106,29 @@ function Login() {
 
         <button
           type="submit"
+          disabled={loading}
           className="w-full py-3 bg-[#C8953A] text-[#080808] font-semibold text-sm tracking-wide hover:bg-[#E8B04A] transition-colors flex items-center justify-center gap-2"
           style={{ borderRadius: 2 }}
         >
-          {mode === 'password' ? 'Sign In' : 'Send OTP'}
+          {loading ? 'Signing in...' : mode === 'password' ? 'Sign In' : 'Send OTP'}
           <ArrowRightIcon size={14} strokeWidth={2} />
         </button>
+
+        {/* Demo Quick Fills */}
+        <div className="pt-2 flex flex-col gap-1.5 font-mono text-[9px]">
+          <span className="text-[#6B6B6B] text-[8px] uppercase tracking-widest">Demo 1-Click Role Accounts:</span>
+          <div className="grid grid-cols-3 gap-1">
+            <button type="button" onClick={() => fillQuick('arjun@anchor.io', 'anchor123')} className="p-1.5 border border-white/8 bg-white/5 hover:border-[#C8953A]/40 text-[#C8953A] text-center" style={{ borderRadius: 2 }}>
+              👑 Owner
+            </button>
+            <button type="button" onClick={() => fillQuick('manager@anchor.io', 'anchor123')} className="p-1.5 border border-white/8 bg-white/5 hover:border-[#C8953A]/40 text-[#4A9EBA] text-center" style={{ borderRadius: 2 }}>
+              👔 Manager
+            </button>
+            <button type="button" onClick={() => fillQuick('sales@anchor.io', 'anchor123')} className="p-1.5 border border-white/8 bg-white/5 hover:border-[#C8953A]/40 text-[#8B6BA8] text-center" style={{ borderRadius: 2 }}>
+              🛡️ Agent
+            </button>
+          </div>
+        </div>
       </form>
 
       <div className="mt-4 flex justify-between font-mono text-[10px] text-[#6B6B6B]">
@@ -93,20 +140,9 @@ function Login() {
         </button>
       </div>
 
-      <div className="mt-8 pt-6 border-t border-white/8">
-        <button
-          onClick={() => navigate('dashboard')}
-          className="w-full py-3 border border-white/10 text-[#6B6B6B] font-mono text-[10px] tracking-widest hover:border-white/20 hover:text-[#F0EDE8] transition-colors flex items-center justify-center gap-3"
-          style={{ borderRadius: 2 }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-          Continue with Google
-        </button>
-      </div>
-
       <div className="mt-6 flex items-center justify-center gap-2 font-mono text-[9px] text-[#3A3A3A]">
         <LockIcon size={10} strokeWidth={1.5} />
-        <span>256-bit encryption · Meta Official Partner</span>
+        <span>256-bit encryption · Meta Cloud API Engine</span>
       </div>
     </AuthShell>
   )
@@ -115,15 +151,58 @@ function Login() {
 // ── G02 Signup
 function Signup() {
   const { navigate } = useRouter()
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
+  const [businessName, setBusinessName] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    try {
+      await authApi.register({
+        name: `${firstName} ${lastName}`.trim(),
+        email,
+        phone: phone ? `+91 ${phone}` : undefined,
+        businessName,
+        password,
+      })
+      navigate('dashboard')
+    } catch (err: any) {
+      setError(err.message || 'Registration failed')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <AuthShell title="Get started." sub="CREATE YOUR ANCHOR ACCOUNT">
-      <form onSubmit={e => { e.preventDefault(); navigate('onboarding') }} className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
-          <input style={{ borderRadius: 2 }} className={inp} placeholder="First name" required />
-          <input style={{ borderRadius: 2 }} className={inp} placeholder="Last name" required />
+      {error && (
+        <div className="mb-3 p-2.5 bg-red-500/10 border border-red-500/20 text-red-400 font-mono text-[10px]" style={{ borderRadius: 2 }}>
+          ⚠️ {error}
         </div>
-        <input style={{ borderRadius: 2 }} className={inp} type="email" placeholder="Work email" required />
+      )}
+
+      <form onSubmit={handleSignup} className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
+          <input
+            style={{ borderRadius: 2 }} className={inp} placeholder="First name"
+            value={firstName} onChange={e => setFirstName(e.target.value)} required
+          />
+          <input
+            style={{ borderRadius: 2 }} className={inp} placeholder="Last name"
+            value={lastName} onChange={e => setLastName(e.target.value)} required
+          />
+        </div>
+        <input
+          style={{ borderRadius: 2 }} className={inp} type="email" placeholder="Work email"
+          value={email} onChange={e => setEmail(e.target.value)} required
+        />
         <div className="flex" style={{ borderRadius: 2, overflow: 'hidden' }}>
           <div className="bg-[#111] border border-white/10 border-r-0 px-3 flex items-center font-mono text-sm text-[#6B6B6B] flex-shrink-0">
             <span className="inline-flex w-4 h-3 mr-1.5 overflow-hidden flex-shrink-0" style={{ borderRadius: 1 }}>
@@ -138,11 +217,19 @@ function Signup() {
             style={{ borderRadius: 0 }}
             placeholder="WhatsApp number"
             type="tel"
+            value={phone}
+            onChange={e => setPhone(e.target.value)}
             required
           />
         </div>
-        <input style={{ borderRadius: 2 }} className={inp} placeholder="Business name" required />
-        <input style={{ borderRadius: 2 }} className={inp} type="password" placeholder="Password (min 8 chars)" required minLength={8} />
+        <input
+          style={{ borderRadius: 2 }} className={inp} placeholder="Business name (e.g. DLF Partner)"
+          value={businessName} onChange={e => setBusinessName(e.target.value)} required
+        />
+        <input
+          style={{ borderRadius: 2 }} className={inp} type="password" placeholder="Password (min 8 chars)"
+          value={password} onChange={e => setPassword(e.target.value)} required minLength={8}
+        />
 
         <div className="flex items-start gap-2 pt-1">
           <input type="checkbox" required className="mt-0.5 accent-[#C8953A]" id="tos" />
@@ -153,10 +240,11 @@ function Signup() {
 
         <button
           type="submit"
+          disabled={loading}
           className="w-full py-3 bg-[#C8953A] text-[#080808] font-semibold text-sm tracking-wide hover:bg-[#E8B04A] transition-colors flex items-center justify-center gap-2 mt-2"
           style={{ borderRadius: 2 }}
         >
-          Create Account <ArrowRightIcon size={14} strokeWidth={2} />
+          {loading ? 'Creating Account...' : 'Create Account'} <ArrowRightIcon size={14} strokeWidth={2} />
         </button>
       </form>
 

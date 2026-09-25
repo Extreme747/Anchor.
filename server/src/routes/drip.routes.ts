@@ -136,4 +136,24 @@ router.post('/enroll', authMiddleware, async (req: AuthenticatedRequest, res: Re
   }
 });
 
+// PATCH /api/drip/sequences/:id
+router.patch('/sequences/:id', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { status, name } = req.body;
+
+    const updated = await prisma.dripSequence.updateMany({
+      where: { id, organizationId: req.user!.organizationId },
+      data: {
+        ...(status && { status }),
+        ...(name && { name }),
+      },
+    });
+
+    res.json({ success: true, updated });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

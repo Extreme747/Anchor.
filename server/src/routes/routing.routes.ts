@@ -117,4 +117,62 @@ router.get('/agents', authMiddleware, async (req: AuthenticatedRequest, res: Res
   }
 });
 
+// PATCH /api/routing/agents/:id/status
+router.patch('/agents/:id/status', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { isOnline, status } = req.body;
+
+    const user = await prisma.user.findFirst({
+      where: { id, organizationId: req.user!.organizationId },
+    });
+
+    if (!user) {
+      res.status(404).json({ error: 'Agent not found' });
+      return;
+    }
+
+    const updated = await prisma.user.update({
+      where: { id },
+      data: {
+        ...(isOnline !== undefined && { isOnline }),
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isOnline: true,
+        activeChatsCount: true,
+        dailyCapacity: true,
+      },
+    });
+
+    res.json(updated);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /api/routing/rules/:id
+router.patch('/rules/:id', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { enabled, priority, name } = req.body;
+
+    const updated = await prisma.routingRule.updateMany({
+      where: { id, organizationId: req.user!.organizationId },
+      data: {
+        ...(enabled !== undefined && { enabled }),
+        ...(priority !== undefined && { priority }),
+        ...(name && { name }),
+      },
+    });
+
+    res.json({ success: true, updated });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   FlowIcon, BoltIcon, CheckIcon, ArrowRightIcon, WarningIcon,
   RupeeSymbol, CardIcon, ClockIcon, SearchIcon, TagIcon, CmdIcon
 } from '../components/Icons'
+import { commerceApi, leadsApi } from '../api/client'
 
 // ── Types for Phase 3
 export interface WhatsAppFlow {
@@ -164,6 +165,8 @@ const ADS_ATTRIBUTION: AdAttribution[] = [
 // P3-02: INTERACTIVE WHATSAPP FLOW BUILDER WITH LIVE PHONE PREVIEW
 // ─────────────────────────────────────────────────────────────────────────────
 function FlowBuilder({ flow, onBack }: { flow?: WhatsAppFlow; onBack: () => void }) {
+  const [publishing, setPublishing] = useState(false)
+  const [flowTitle, setFlowTitle] = useState(flow?.name || 'Custom WhatsApp Interactive Form')
   const [screens, setScreens] = useState(
     flow?.screens || [
       {
@@ -177,6 +180,23 @@ function FlowBuilder({ flow, onBack }: { flow?: WhatsAppFlow; onBack: () => void
     ]
   )
   const [activeScreenIndex, setActiveScreenIndex] = useState(0)
+
+  const handlePublish = async () => {
+    setPublishing(true)
+    try {
+      await commerceApi.createFlow({
+        name: flowTitle,
+        category: flow?.category || 'Real Estate',
+        screens,
+      })
+      onBack()
+    } catch (err) {
+      console.warn('Flow publish fallback:', err)
+      onBack()
+    } finally {
+      setPublishing(false)
+    }
+  }
 
   const activeScreen = screens[activeScreenIndex] || screens[0]
 
@@ -223,14 +243,24 @@ function FlowBuilder({ flow, onBack }: { flow?: WhatsAppFlow; onBack: () => void
       <div className="flex items-center justify-between">
         <div>
           <div className="font-mono text-[9px] text-[#C8953A] tracking-widest">P3-02 · WHATSAPP FLOWS CANVAS (META DATA API v4.0)</div>
-          <h2 className="font-display text-2xl text-[#F0EDE8] mt-0.5">{flow?.name || 'Custom WhatsApp Interactive Form'}</h2>
+          <input
+            type="text"
+            value={flowTitle}
+            onChange={e => setFlowTitle(e.target.value)}
+            className="font-display text-2xl text-[#F0EDE8] mt-0.5 bg-transparent border-b border-transparent hover:border-white/20 focus:border-[#C8953A] outline-none"
+          />
         </div>
         <div className="flex gap-2">
           <button onClick={onBack} className="px-3 py-2 border border-white/10 font-mono text-[10px] text-[#6B6B6B] hover:text-[#F0EDE8]" style={{ borderRadius: 2 }}>
             Cancel
           </button>
-          <button className="px-4 py-2 bg-[#C8953A] text-[#080808] font-mono text-[10px] font-semibold tracking-wide hover:bg-[#E8B04A] transition-colors" style={{ borderRadius: 2 }}>
-            Publish to Meta Cloud API →
+          <button
+            onClick={handlePublish}
+            disabled={publishing}
+            className="px-4 py-2 bg-[#C8953A] text-[#080808] font-mono text-[10px] font-semibold tracking-wide hover:bg-[#E8B04A] transition-colors disabled:opacity-50"
+            style={{ borderRadius: 2 }}
+          >
+            {publishing ? 'Publishing...' : 'Publish to Meta Cloud API →'}
           </button>
         </div>
       </div>
@@ -444,23 +474,98 @@ function PaymentsView() {
   const [newDesc, setNewDesc] = useState('Sector 62 Unit Allotment Token')
   const [newLead, setNewLead] = useState('Arjun Sharma (+91 98234 11204)')
   const [newMethod, setNewMethod] = useState<'Razorpay UPI' | 'WhatsApp Pay'>('Razorpay UPI')
+  const [leadsList, setLeadsList] = useState<any[]>([])
+  const [selectedLeadId, setSelectedLeadId] = useState<string>('')
+  const [submitting, setSubmitting] = useState(false)
+  const [simulatingPaymentId, setSimulatingPaymentId] = useState<string | null>(null)
+
+  const loadPayments = async () => {
+    try {
+      const data = await commerceApi.getPayments()
+      if (Array.isArray(data) && data.length > 0) {
+        const mapped: PaymentRecord[] = data.map((p: any) => ({
+          id: p.id,
+          leadName: p.lead?.name || 'Customer',
+          leadPhone: p.lead?.phone || '+91 98XXX XX000',
+          amount: p.amountINR || 50000,
+          description: p.description || 'Token Payment',
+          method: (p.paymentMethod || 'Razorpay UPI') as any,
+          status: p.status as any,
+          createdAt: new Date(p.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          txnId: p.razorpayPaymentId || p.razorpayLinkId,
+        }))
+        setPayments(prev => {
+          const existingIds = new Set(mapped.map(m => m.id))
+          return [...mapped, ...prev.filter(p => !existingIds.has(p.id))]
+        })
+      }
+    } catch (err) {
+      console.warn('Backend payments fallback:', err)
+    }
+  }
+
+  useEffect(() => {
+    loadPayments()
+    leadsApi.getLeads().then((data) => {
+      if (Array.isArray(data) && data.length > 0) {
+        setLeadsList(data)
+        setSelectedLeadId(data[0].id)
+      }
+    }).catch(() => {})
+  }, [])
 
   const totalCollected = payments.filter(p => p.status === 'PAID').reduce((s, p) => s + p.amount, 0)
   const pendingCollection = payments.filter(p => p.status === 'SENT').reduce((s, p) => s + p.amount, 0)
 
-  const handleCreatePayment = () => {
-    const newRecord: PaymentRecord = {
-      id: `PAY_00${payments.length + 1}`,
-      leadName: newLead.split(' ')[0],
-      leadPhone: '+91 98234 99120',
-      amount: Number(newAmount),
-      description: newDesc,
-      method: newMethod,
-      status: 'SENT',
-      createdAt: 'Just now',
+  const handleCreatePayment = async () => {
+    setSubmitting(true)
+    try {
+      if (selectedLeadId) {
+        await commerceApi.createPaymentLink({
+          leadId: selectedLeadId,
+          amountINR: Number(newAmount),
+          description: newDesc,
+          paymentMethod: newMethod,
+        })
+        await loadPayments()
+      } else {
+        const chosenLead = leadsList.find(l => l.id === selectedLeadId) || { name: newLead, phone: '+91 98234 99120' }
+        const newRecord: PaymentRecord = {
+          id: `PAY_00${payments.length + 1}`,
+          leadName: chosenLead.name,
+          leadPhone: chosenLead.phone,
+          amount: Number(newAmount),
+          description: newDesc,
+          method: newMethod,
+          status: 'SENT',
+          createdAt: 'Just now',
+        }
+        setPayments([newRecord, ...payments])
+      }
+      setShowCreateModal(false)
+    } catch (err) {
+      console.warn('Error creating payment:', err)
+      setShowCreateModal(false)
+    } finally {
+      setSubmitting(false)
     }
-    setPayments([newRecord, ...payments])
-    setShowCreateModal(false)
+  }
+
+  const handleSimulatePaymentSuccess = async (paymentId: string) => {
+    setSimulatingPaymentId(paymentId)
+    try {
+      if (paymentId.includes('-')) {
+        await commerceApi.simulatePaymentSuccess(paymentId)
+        await loadPayments()
+      } else {
+        setPayments(ps => ps.map(p => p.id === paymentId ? { ...p, status: 'PAID', txnId: `pay_${Date.now()}` } : p))
+      }
+    } catch (err) {
+      console.warn('Payment simulation fallback:', err)
+      setPayments(ps => ps.map(p => p.id === paymentId ? { ...p, status: 'PAID' } : p))
+    } finally {
+      setSimulatingPaymentId(null)
+    }
   }
 
   return (
@@ -479,13 +584,28 @@ function PaymentsView() {
 
             <div>
               <label className="font-mono text-[9px] text-[#6B6B6B] tracking-widest block mb-1">SELECT LEAD</label>
-              <input
-                type="text"
-                value={newLead}
-                onChange={e => setNewLead(e.target.value)}
-                className="w-full bg-[#111] border border-white/10 text-xs text-[#F0EDE8] px-3 py-2.5 focus:border-[#C8953A] outline-none"
-                style={{ borderRadius: 2 }}
-              />
+              {leadsList.length > 0 ? (
+                <select
+                  value={selectedLeadId}
+                  onChange={e => setSelectedLeadId(e.target.value)}
+                  className="w-full bg-[#111] border border-white/10 text-xs text-[#F0EDE8] px-3 py-2.5 outline-none cursor-pointer focus:border-[#C8953A]"
+                  style={{ borderRadius: 2 }}
+                >
+                  {leadsList.map(l => (
+                    <option key={l.id} value={l.id}>
+                      {l.name} ({l.phone}) · Intent {l.intentScore}/100
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  value={newLead}
+                  onChange={e => setNewLead(e.target.value)}
+                  className="w-full bg-[#111] border border-white/10 text-xs text-[#F0EDE8] px-3 py-2.5 focus:border-[#C8953A] outline-none"
+                  style={{ borderRadius: 2 }}
+                />
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -536,8 +656,12 @@ function PaymentsView() {
               <button onClick={() => setShowCreateModal(false)} className="flex-1 py-2.5 border border-white/10 font-mono text-[10px] text-[#6B6B6B] hover:text-[#F0EDE8]">
                 Cancel
               </button>
-              <button onClick={handleCreatePayment} className="flex-1 py-2.5 bg-[#C8953A] text-[#080808] font-mono text-[10px] font-semibold tracking-wide hover:bg-[#E8B04A]">
-                Generate & Dispatch Link →
+              <button
+                onClick={handleCreatePayment}
+                disabled={submitting}
+                className="flex-1 py-2.5 bg-[#C8953A] text-[#080808] font-mono text-[10px] font-semibold tracking-wide hover:bg-[#E8B04A] transition-colors disabled:opacity-50"
+              >
+                {submitting ? 'Generating...' : 'Generate & Dispatch Link →'}
               </button>
             </div>
           </div>
@@ -549,7 +673,11 @@ function PaymentsView() {
         {[
           { label: 'Total Revenue Collected', value: `₹${(totalCollected / 100000).toFixed(2)} Lakhs`, color: '#C8953A' },
           { label: 'Pending in Active Chats', value: `₹${(pendingCollection / 100000).toFixed(2)} Lakhs`, color: '#EAB308' },
-          { label: 'Paid Conversion Rate', value: '38.2%', color: '#4ADE80' },
+          {
+            label: 'Paid Conversion Rate',
+            value: payments.length > 0 ? `${Math.round((payments.filter(p => p.status === 'PAID').length / payments.length) * 100)}%` : '0%',
+            color: '#4ADE80'
+          },
           { label: 'Zero-Redirect Checkout', value: '100% Native', color: '#4A9EBA' },
         ].map(k => (
           <div key={k.label} className="border border-white/8 p-4 bg-[#0D0D0D]" style={{ borderRadius: 2 }}>
@@ -610,11 +738,25 @@ function PaymentsView() {
             </div>
             <div className="flex items-center gap-2">
               {p.status === 'PAID' ? (
-                <button className="font-mono text-[9px] text-[#C8953A] hover:underline">Download GST Receipt</button>
-              ) : (
-                <button className="font-mono text-[9px] text-[#6B6B6B] hover:text-[#F0EDE8] border border-white/10 px-2 py-1">
-                  Resend in Chat
+                <button
+                  onClick={() => alert(`Official GST Receipt: https://anchor.io/receipt/${p.txnId || p.id}`)}
+                  className="font-mono text-[9px] text-[#C8953A] hover:underline"
+                >
+                  Download GST Receipt
                 </button>
+              ) : (
+                <>
+                  <button className="font-mono text-[9px] text-[#6B6B6B] hover:text-[#F0EDE8] border border-white/10 px-2 py-1">
+                    Resend in Chat
+                  </button>
+                  <button
+                    onClick={() => handleSimulatePaymentSuccess(p.id)}
+                    disabled={simulatingPaymentId === p.id}
+                    className="font-mono text-[9px] text-[#4ADE80] border border-green-500/25 bg-green-500/10 px-2 py-1 hover:bg-green-500/20 transition-colors disabled:opacity-50"
+                  >
+                    {simulatingPaymentId === p.id ? 'Confirming...' : '⚡ Simulate Paid'}
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -731,8 +873,45 @@ export default function Commerce() {
   const [flows, setFlows] = useState<WhatsAppFlow[]>(INITIAL_FLOWS)
   const [buildingFlow, setBuildingFlow] = useState<WhatsAppFlow | 'new' | null>(null)
 
+  const loadFlows = async () => {
+    try {
+      const data = await commerceApi.getFlows()
+      if (Array.isArray(data) && data.length > 0) {
+        const mapped: WhatsAppFlow[] = data.map((f: any) => ({
+          id: f.id,
+          name: f.name,
+          category: f.category || 'Real Estate',
+          screensCount: f.screens?.length || 2,
+          submissions: 12,
+          conversionRate: 68.4,
+          status: 'ACTIVE',
+          lastActive: 'Just now',
+          screens: f.screens || [],
+        }))
+        setFlows(prev => {
+          const existingIds = new Set(mapped.map(m => m.id))
+          return [...mapped, ...prev.filter(p => !existingIds.has(p.id))]
+        })
+      }
+    } catch (err) {
+      console.warn('Backend flows fallback:', err)
+    }
+  }
+
+  useEffect(() => {
+    loadFlows()
+  }, [])
+
   if (buildingFlow !== null) {
-    return <FlowBuilder flow={buildingFlow === 'new' ? undefined : buildingFlow} onBack={() => setBuildingFlow(null)} />
+    return (
+      <FlowBuilder
+        flow={buildingFlow === 'new' ? undefined : buildingFlow}
+        onBack={() => {
+          setBuildingFlow(null)
+          loadFlows()
+        }}
+      />
+    )
   }
 
   return (

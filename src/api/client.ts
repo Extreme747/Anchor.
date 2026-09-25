@@ -146,6 +146,11 @@ export const dripApi = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+  updateSequence: (id: string, updates: any) =>
+    apiRequest(`/drip/sequences/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    }),
   enrollLeads: (sequenceId: string, leadIds: string[]) =>
     apiRequest('/drip/enroll', {
       method: 'POST',
@@ -162,7 +167,7 @@ export const commerceApi = {
       body: JSON.stringify(flow),
     }),
   getPayments: () => apiRequest('/commerce/payments'),
-  createPaymentLink: (payload: { leadId: string; amountINR: number; description?: string }) =>
+  createPaymentLink: (payload: { leadId: string; amountINR: number; description?: string; paymentMethod?: string }) =>
     apiRequest('/commerce/payments/create-link', {
       method: 'POST',
       body: JSON.stringify(payload),
@@ -182,6 +187,11 @@ export const routingApi = {
       method: 'POST',
       body: JSON.stringify(rule),
     }),
+  updateRule: (id: string, updates: any) =>
+    apiRequest(`/routing/rules/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    }),
   getSLA: () => apiRequest('/routing/sla'),
   updateSLA: (updates: any) =>
     apiRequest('/routing/sla', {
@@ -189,6 +199,11 @@ export const routingApi = {
       body: JSON.stringify(updates),
     }),
   getAgents: () => apiRequest('/routing/agents'),
+  updateAgentStatus: (id: string, isOnline: boolean) =>
+    apiRequest(`/routing/agents/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isOnline }),
+    }),
 };
 
 // ── Analytics API
