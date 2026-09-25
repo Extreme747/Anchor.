@@ -48,21 +48,10 @@ export default function Footer() {
           </div>
 
           <div>
-            <div className="font-mono text-[10px] text-[#6B6B6B] tracking-widest uppercase mb-4">Legal & Support</div>
+            <div className="font-mono text-[10px] text-[#6B6B6B] tracking-widest uppercase mb-4">Legal</div>
             <div className="space-y-2">
-              {[
-                { label: 'Privacy Policy', page: 'privacy' as const },
-                { label: 'Terms of Service', page: 'terms' as const },
-                { label: 'Refund & Cancellation', page: 'refunds' as const },
-                { label: 'Contact Us & Delivery', page: 'contact' as const },
-              ].map(item => (
-                <button
-                  key={item.label}
-                  onClick={() => navigate(item.page)}
-                  className="block text-sm text-[#6B6B6B] hover:text-[#F0EDE8] transition-colors text-left"
-                >
-                  {item.label}
-                </button>
+              {['Privacy Policy', 'Terms of Service', 'Meta Partner Program'].map(item => (
+                <a key={item} href="#" className="block text-sm text-[#6B6B6B] hover:text-[#F0EDE8] transition-colors">{item}</a>
               ))}
             </div>
           </div>

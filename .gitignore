@@ -3,6 +3,10 @@ dist/
 build/
 .cache/
 .env*
+!.env.example
+*.db
+*.db-journal
+*.sqlite
 .vite/
 vite.config.*.timestamp-*
 *.tsbuildinfo
@@ -12,9 +16,6 @@ logs/
 .claude-replay.*
 .tmp-*
 /.figma/design-context/
-
-# Server folder (backend to be deployed separately)
-server/
 
 # Platform-managed agentplat state, not project source. In the
 # client-initiated single-repo workspace layout (make's `Path: "."` spec) the

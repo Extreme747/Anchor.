@@ -1,0 +1,300 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Organization {
+  id                    String        @id @default(uuid())
+  name                  String
+  slug                  String        @unique
+  industry              String?       @default("Real Estate")
+  teamSize              Int           @default(1)
+  phone                 String?
+  wabaId                String?
+  phoneNumberId         String?
+  metaAccessToken       String?
+  metaAppSecret         String?
+  webhookVerifyToken    String        @default(uuid())
+  currency              String        @default("INR")
+  timezone              String        @default("Asia/Kolkata")
+  numberMaskingEnabled  Boolean       @default(false)
+  workingHoursStart     String        @default("09:00")
+  workingHoursEnd       String        @default("19:00")
+  workingDays           String        @default("1,2,3,4,5,6")
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  users                 User[]
+  leads                 Lead[]
+  messages              Message[]
+  templates             Template[]
+  autoReplyRules        AutoReplyRule[]
+  intentRules           IntentRule[]
+  dripSequences         DripSequence[]
+  paymentLinks          PaymentLink[]
+  routingRules          RoutingRule[]
+  slaConfigs            SLAConfig[]
+  auditLogs             AuditLog[]
+  abTests               ABTest[]
+  flows                 Flow[]
+  integrations          Integration[]
+}
+
+model User {
+  id               String       @id @default(uuid())
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email            String       @unique
+  passwordHash     String
+  name             String
+  phone            String?
+  role             String       @default("AGENT") // OWNER, MANAGER, AGENT
+  avatar           String?
+  isActive         Boolean      @default(true)
+  isOnline         Boolean      @default(false)
+  activeChatsCount Int          @default(0)
+  dailyCapacity    Int          @default(30)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  assignedLeads    Lead[]
+  auditLogs        AuditLog[]
+}
+
+model Lead {
+  id                  String          @id @default(uuid())
+  organizationId      String
+  organization        Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignedAgentId     String?
+  assignedAgent       User?           @relation(fields: [assignedAgentId], references: [id])
+  name                String
+  phone               String
+  email               String?
+  source              String          @default("Organic WhatsApp")
+  city                String?
+  tags                String          @default("[]") // JSON string of tag names
+  status              String          @default("NEW") // NEW, CONTACTED, QUALIFIED, WON, LOST
+  intentScore         Int             @default(0) // 0-100 Heuristic Intent Dial
+  estimatedValueINR   Float           @default(0)
+  unreadCount         Int             @default(0)
+  isCtwa              Boolean         @default(false)
+  ctwaReferral        String?         // JSON string of referral object
+  ctwaWindowExpiresAt DateTime?       // 72 hours free window
+  lastInboundAt       DateTime?
+  lastOutboundAt      DateTime?
+  sessionExpiresAt    DateTime?       // 24 hours Meta conversation gate
+  isSessionOpen       Boolean         @default(false)
+  slaBreached         Boolean         @default(false)
+  slaDeadlineAt       DateTime?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  messages            Message[]
+  enrollments         DripEnrollment[]
+  paymentLinks        PaymentLink[]
+}
+
+model Message {
+  id              String            @id @default(uuid())
+  organizationId  String
+  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  leadId          String
+  lead            Lead              @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  senderType      String            // LEAD, AGENT, SYSTEM, AUTO_REPLY
+  senderId        String?           // User ID if sent by agent
+  text            String?
+  mediaUrl        String?
+  mediaType       String?           // image, document, audio, video
+  messageType     String            @default("TEXT") // TEXT, TEMPLATE, FLOW, BUTTON_REPLY
+  templateId      String?
+  metaMessageId   String?           @unique
+  status          String            @default("QUEUED") // QUEUED, SENT, DELIVERED, READ, FAILED
+  messageCostINR  Float             @default(0.0)
+  category        String            @default("SERVICE") // MARKETING, UTILITY, AUTHENTICATION, SERVICE
+  isCtwaFree      Boolean           @default(false)
+  rawPayload      String?           // JSON string of raw payload
+  createdAt       DateTime          @default(now())
+}
+
+model Template {
+  id              String         @id @default(uuid())
+  organizationId  String
+  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name            String
+  category        String         @default("MARKETING") // MARKETING, UTILITY, AUTHENTICATION, SERVICE
+  language        String         @default("en_US")
+  headerType      String?        @default("NONE") // NONE, TEXT, IMAGE, VIDEO, DOCUMENT
+  headerContent   String?
+  bodyText        String
+  footerText      String?
+  buttons         String?        // JSON string array of buttons
+  metaTemplateId  String?
+  metaStatus      String         @default("DRAFT") // DRAFT, PENDING, APPROVED, REJECTED
+  rejectionReason String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+model AutoReplyRule {
+  id              String       @id @default(uuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name            String
+  triggerType     String       // KEYWORD, EXACT, REGEX, WORKING_HOURS, DEFAULT
+  keywords        String       @default("[]") // JSON string of keyword array
+  responseText    String
+  templateId      String?
+  isEnabled       Boolean      @default(true)
+  dedupSeconds    Int          @default(30)
+  priority        Int          @default(0)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+model IntentRule {
+  id              String       @id @default(uuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  category        String       // BUDGET, TIMELINE, ACTION, HINGLISH, NEGATIVE
+  phrase          String
+  pointsDelta     Int          // e.g., +25, +30, +35, -15
+  matchType       String       @default("CONTAINS") // CONTAINS, EXACT, REGEX
+  isEnabled       Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+}
+
+model DripSequence {
+  id              String           @id @default(uuid())
+  organizationId  String
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name            String
+  status          String           @default("DRAFT") // ACTIVE, PAUSED, DRAFT
+  triggerEvent    String           @default("LEAD_CREATED")
+  steps           DripStep[]
+  enrollments     DripEnrollment[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model DripStep {
+  id              String       @id @default(uuid())
+  sequenceId      String
+  sequence        DripSequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  stepNumber      Int
+  delayMinutes    Int
+  templateId      String?
+  customText      String?
+  branchRule      String?      // STOP_IF_REPLIED, STOP_IF_WON, PAUSE_ON_AGENT
+  createdAt       DateTime     @default(now())
+}
+
+model DripEnrollment {
+  id              String       @id @default(uuid())
+  leadId          String
+  lead            Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  sequenceId      String
+  sequence        DripSequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  currentStep     Int          @default(1)
+  status          String       @default("ACTIVE") // ACTIVE, COMPLETED, PAUSED, CANCELLED
+  nextRunAt       DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+model PaymentLink {
+  id              String        @id @default(uuid())
+  organizationId  String
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  leadId          String
+  lead            Lead          @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  amountINR       Float
+  description     String
+  razorpayLinkId  String?       @unique
+  paymentUrl      String?
+  status          String        @default("CREATED") // CREATED, SENT, PAID, EXPIRED, FAILED
+  paymentMethod   String?       // UPI, CARD, NETBANKING
+  paidAt          DateTime?
+  receiptUrl      String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model RoutingRule {
+  id              String       @id @default(uuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name            String
+  conditions      String       @default("{}") // JSON string of conditions
+  strategy        String       @default("ROUND_ROBIN") // ROUND_ROBIN, SPECIFIC_AGENT, SKILL_BASED
+  targetAgentId   String?
+  priority        Int          @default(0)
+  isEnabled       Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+}
+
+model SLAConfig {
+  id                    String       @id @default(uuid())
+  organizationId        String
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  firstResponseMinutes  Int          @default(7)
+  autoRevokeOnBreach    Boolean      @default(true)
+  escalationTarget      String       @default("MANAGER") // MANAGER, OWNER
+  createdAt             DateTime     @default(now())
+}
+
+model Flow {
+  id              String       @id @default(uuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name            String
+  category        String       @default("Real Estate")
+  screensJson     String       @default("[]") // JSON string of screens
+  metaFlowId      String?
+  status          String       @default("DRAFT")
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+model ABTest {
+  id               String       @id @default(uuid())
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name             String
+  templateAId      String
+  templateBId      String
+  splitPercent     Int          @default(50)
+  status           String       @default("RUNNING") // RUNNING, COMPLETED
+  winnerTemplateId String?
+  statsA           String       @default("{\"sent\":0,\"delivered\":0,\"replied\":0}")
+  statsB           String       @default("{\"sent\":0,\"delivered\":0,\"replied\":0}")
+  createdAt        DateTime     @default(now())
+}
+
+model Integration {
+  id              String       @id @default(uuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  provider        String       // GOOGLE_SHEETS, 99ACRES, MAGICBRICKS, ZOHO, TALLY
+  credentials     String       @default("{}")
+  config          String       @default("{}")
+  isEnabled       Boolean      @default(false)
+  lastSyncAt      DateTime?
+  createdAt       DateTime     @default(now())
+}
+
+model AuditLog {
+  id              String       @id @default(uuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId          String?
+  user            User?        @relation(fields: [userId], references: [id])
+  action          String       // LEAD_REASSIGN, NUMBER_UNMASK_ATTEMPT, TEMPLATE_SUBMIT
+  resource        String
+  details         String?
+  ipAddress       String?
+  createdAt       DateTime     @default(now())
+}

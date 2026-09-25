@@ -32,10 +32,9 @@ function AppShell() {
         {page === 'changelog' && <Changelog />}
         {page === 'about' && <About />}
         {page === 'blog' && <Blog />}
-        {page === 'terms' && <Legal section="terms" />}
-        {page === 'privacy' && <Legal section="privacy" />}
-        {page === 'refunds' && <Legal section="refunds" />}
-        {page === 'contact' && <Legal section="contact" />}
+        {(page === 'terms' || page === 'privacy' || page === 'refunds' || page === 'contact') && (
+          <Legal section={page as any} />
+        )}
       </main>
       <Footer />
       {page === 'home' && <LiveDemoBar />}
