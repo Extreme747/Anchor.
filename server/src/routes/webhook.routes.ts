@@ -209,6 +209,8 @@ export async function processInboundMessage(org: any, msg: any) {
 
     SocketService.broadcastToLead(lead.id, 'message:new', replyMsg);
   }
+
+  return lead;
 }
 
 export default router;

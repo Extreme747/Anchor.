@@ -182,6 +182,43 @@ export const commerceApi = {
       method: 'POST',
       body: JSON.stringify({ paymentId }),
     }),
+  simulateRazorpayWebhook: (payload: { leadId?: string; amountINR?: number }) =>
+    apiRequest('/commerce/webhooks/simulate', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+};
+
+// ── Integrations API
+export const integrationsApi = {
+  getIntegrations: () => apiRequest('/integrations'),
+  toggleIntegration: (provider: string, isEnabled: boolean) =>
+    apiRequest(`/integrations/${provider}/toggle`, {
+      method: 'POST',
+      body: JSON.stringify({ isEnabled }),
+    }),
+  getGoogleSheetsScript: () => apiRequest('/integrations/sheets/script'),
+  syncOutGoogleSheets: () =>
+    apiRequest('/integrations/sheets/sync-out', {
+      method: 'POST',
+    }),
+  simulateSheetsInbound: (payload: any) =>
+    apiRequest('/integrations/sheets/inbound', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  simulatePortalInbound: (payload: {
+    portal?: string;
+    leadName?: string;
+    phone?: string;
+    propertyTitle?: string;
+    budget?: string;
+    city?: string;
+  }) =>
+    apiRequest('/integrations/portal-inbound', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
 };
 
 // ── Routing & SLA API

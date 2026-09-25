@@ -1,4 +1,5 @@
-import { Router, Response } from 'express';
+import { Router, Request, Response } from 'express';
+import crypto from 'crypto';
 import { prisma } from '../lib/prisma.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { AuthenticatedRequest } from '../types/index.js';
@@ -172,6 +173,179 @@ router.post('/payments/simulate-success', authMiddleware, async (req: Authentica
     });
 
     res.json({ success: true, payment: updatedPayment });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RAZORPAY PRODUCTION WEBHOOK RECEIVER
+// ─────────────────────────────────────────────────────────────────────────────
+
+// POST /api/commerce/webhooks/razorpay
+router.post('/webhooks/razorpay', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const signature = req.headers['x-razorpay-signature'] as string;
+    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET || 'rzp_webhook_secret_2026';
+
+    // Verify cryptographic HMAC signature if provided
+    if (signature) {
+      const expectedSignature = crypto
+        .createHmac('sha256', webhookSecret)
+        .update(JSON.stringify(req.body))
+        .digest('hex');
+
+      if (signature !== expectedSignature && process.env.NODE_ENV === 'production') {
+        console.warn('⚠️ Razorpay webhook signature mismatch!');
+        res.status(400).json({ error: 'Invalid Razorpay signature' });
+        return;
+      }
+    }
+
+    const event = req.body.event; // e.g. 'payment_link.paid', 'payment.captured'
+    const payload = req.body.payload;
+
+    let razorpayLinkId = '';
+    let amountINR = 0;
+    let paymentId = '';
+
+    if (payload?.payment_link?.entity) {
+      razorpayLinkId = payload.payment_link.entity.id;
+      amountINR = payload.payment_link.entity.amount / 100;
+    } else if (payload?.payment?.entity) {
+      paymentId = payload.payment.entity.id;
+      amountINR = payload.payment.entity.amount / 100;
+      razorpayLinkId = payload.payment.entity.description || '';
+    }
+
+    // Find matching PaymentLink in database
+    let paymentLink = await prisma.paymentLink.findFirst({
+      where: {
+        OR: [
+          ...(razorpayLinkId ? [{ razorpayLinkId }] : []),
+          ...(amountINR ? [{ amountINR }] : []),
+        ],
+      },
+      include: { lead: true, organization: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (paymentLink) {
+      const updatedPayment = await prisma.paymentLink.update({
+        where: { id: paymentLink.id },
+        data: {
+          status: 'PAID',
+          paidAt: new Date(),
+          receiptUrl: `https://anchor.io/receipt/${paymentLink.razorpayLinkId || paymentId || 'rzp_paid'}`,
+        },
+      });
+
+      // Update lead to WON
+      await prisma.lead.update({
+        where: { id: paymentLink.leadId },
+        data: { status: 'WON' },
+      });
+
+      // Send WhatsApp payment confirmation in chat thread
+      const msg = await prisma.message.create({
+        data: {
+          organizationId: paymentLink.organizationId,
+          leadId: paymentLink.leadId,
+          senderType: 'SYSTEM',
+          text: `🎉 PAYMENT CONFIRMED (Razorpay): ₹${amountINR.toLocaleString('en-IN')} received successfully!\n\nBooking token is locked. Receipt: ${updatedPayment.receiptUrl}`,
+          status: 'DELIVERED',
+          category: 'SERVICE',
+          messageCostINR: 0.0,
+        },
+      });
+
+      SocketService.broadcastToLead(paymentLink.leadId, 'message:new', msg);
+      SocketService.broadcastToOrg(paymentLink.organizationId, 'lead:update', {
+        id: paymentLink.leadId,
+        status: 'WON',
+      });
+      SocketService.broadcastToOrg(paymentLink.organizationId, 'payment:received', {
+        payment: updatedPayment,
+        lead: paymentLink.lead,
+      });
+
+      console.log(`✅ Razorpay Webhook Processed: ₹${amountINR} received for Lead ${paymentLink.lead.name}`);
+    }
+
+    res.json({ status: 'ok', event, processed: Boolean(paymentLink) });
+  } catch (err: any) {
+    console.error('Error processing Razorpay webhook:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/commerce/webhooks/simulate
+router.post('/webhooks/simulate', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { leadId, amountINR } = req.body;
+
+    const lead = await prisma.lead.findFirst({
+      where: leadId ? { id: leadId } : {},
+      include: { organization: true },
+    });
+
+    if (!lead) {
+      res.status(404).json({ error: 'Lead not found for simulation' });
+      return;
+    }
+
+    const testAmount = amountINR ? parseFloat(amountINR) : 25000;
+    const rzpId = `plink_test_${Date.now()}`;
+
+    // Create payment link if not exists
+    const payment = await prisma.paymentLink.create({
+      data: {
+        organizationId: lead.organizationId,
+        leadId: lead.id,
+        amountINR: testAmount,
+        description: 'Simulated Razorpay Token Payment',
+        razorpayLinkId: rzpId,
+        paymentUrl: `https://rzp.io/i/${rzpId}`,
+        status: 'PAID',
+        paidAt: new Date(),
+        receiptUrl: `https://anchor.io/receipt/${rzpId}`,
+        paymentMethod: 'UPI',
+      },
+    });
+
+    // Update lead to WON
+    await prisma.lead.update({
+      where: { id: lead.id },
+      data: { status: 'WON' },
+    });
+
+    const msg = await prisma.message.create({
+      data: {
+        organizationId: lead.organizationId,
+        leadId: lead.id,
+        senderType: 'SYSTEM',
+        text: `⚡ RAZORPAY VERIFIED: ₹${testAmount.toLocaleString('en-IN')} Received via UPI!\n\nBooking token is confirmed. Receipt: ${payment.receiptUrl}`,
+        status: 'DELIVERED',
+        category: 'SERVICE',
+        messageCostINR: 0.0,
+      },
+    });
+
+    SocketService.broadcastToLead(lead.id, 'message:new', msg);
+    SocketService.broadcastToOrg(lead.organizationId, 'lead:update', {
+      id: lead.id,
+      status: 'WON',
+    });
+    SocketService.broadcastToOrg(lead.organizationId, 'payment:received', {
+      payment,
+      lead,
+    });
+
+    res.json({
+      success: true,
+      message: `Razorpay webhook simulated successfully for ₹${testAmount.toLocaleString('en-IN')}`,
+      payment,
+    });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
