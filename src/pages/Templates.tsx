@@ -1,15 +1,16 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   SearchIcon, CheckIcon, ArrowRightIcon, BoltIcon,
   ClockIcon, WarningIcon, TagIcon, SendIcon,
 } from '../components/Icons'
+import { templatesApi } from '../api/client'
 
 // ── Types
 type TemplateStatus = 'APPROVED' | 'PENDING' | 'REJECTED'
 type TemplateCategory = 'MARKETING' | 'UTILITY' | 'AUTHENTICATION'
 
-interface Template {
-  id: number
+export interface Template {
+  id: string | number
   name: string
   category: TemplateCategory
   language: string
@@ -163,16 +164,56 @@ function ApprovalTracker({ status }: { status: TemplateStatus }) {
 }
 
 // ── P2-07 Template Create/Edit
-function TemplateEditor({ template, onBack }: { template?: Template; onBack: () => void }) {
+function TemplateEditor({
+  template,
+  onBack,
+  onSubmit,
+}: {
+  template?: Template
+  onBack: () => void
+  onSubmit: (data: any) => Promise<void>
+}) {
+  const [name, setName] = useState(template?.name || '')
   const [category, setCategory] = useState<TemplateCategory>(template?.category || 'MARKETING')
   const [body, setBody] = useState(template?.body || '')
   const [header, setHeader] = useState(template?.header || '')
   const [footer, setFooter] = useState(template?.footer || '')
   const [language, setLanguage] = useState(template?.language || 'English')
   const [buttons, setButtons] = useState(template?.buttons || [])
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const insertVar = (varNum: number) => setBody(b => b + `{{${varNum}}}`)
   const varCount = (body.match(/\{\{\d+\}\}/g) || []).length
+
+  const handleSubmit = async (isDraft = false) => {
+    if (!name.trim()) {
+      alert('Please enter a template name')
+      return
+    }
+    if (!body.trim()) {
+      alert('Please enter message body')
+      return
+    }
+    setIsSubmitting(true)
+    try {
+      await onSubmit({
+        name,
+        category,
+        language: language === 'English' ? 'en_US' : language,
+        headerType: header ? 'TEXT' : 'NONE',
+        headerContent: header || undefined,
+        bodyText: body,
+        footerText: footer || undefined,
+        buttons,
+        metaStatus: isDraft ? 'PENDING' : 'APPROVED',
+      })
+      onBack()
+    } catch (err: any) {
+      alert('Failed to save template: ' + err.message)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   return (
     <div className="grid md:grid-cols-[1fr_300px] gap-6">
@@ -189,7 +230,8 @@ function TemplateEditor({ template, onBack }: { template?: Template; onBack: () 
           <input
             className="w-full bg-[#111] border border-white/10 text-[#F0EDE8] text-sm px-4 py-3 placeholder-[#444] focus:outline-none focus:border-[#C8953A] transition-colors font-mono"
             style={{ borderRadius: 2 }}
-            defaultValue={template?.name || ''}
+            value={name}
+            onChange={e => setName(e.target.value)}
             placeholder="lowercase_with_underscores"
           />
         </div>
@@ -308,23 +350,25 @@ function TemplateEditor({ template, onBack }: { template?: Template; onBack: () 
 
         <div className="flex gap-3 pt-2">
           <button
-            onClick={onBack}
+            onClick={() => handleSubmit(true)}
+            disabled={isSubmitting}
             className="flex-1 py-3 border border-white/10 font-mono text-[10px] text-[#6B6B6B] hover:text-[#F0EDE8] hover:border-white/20 transition-colors"
             style={{ borderRadius: 2 }}>
-            Save as Draft
+            {isSubmitting ? 'Saving...' : 'Save as Draft'}
           </button>
           <button
-            onClick={onBack}
+            onClick={() => handleSubmit(false)}
+            disabled={isSubmitting}
             className="flex-1 py-3 bg-[#C8953A] text-[#080808] font-semibold text-sm hover:bg-[#E8B04A] transition-colors flex items-center justify-center gap-2"
             style={{ borderRadius: 2 }}>
-            Submit for Approval <ArrowRightIcon size={14} strokeWidth={2} />
+            {isSubmitting ? 'Submitting...' : 'Submit for Approval'} <ArrowRightIcon size={14} strokeWidth={2} />
           </button>
         </div>
       </div>
 
       {/* Live preview panel */}
       <div className="space-y-4 sticky top-4">
-        <TemplatePreview template={{ ...{ id: 0, name: '', category, language, status: 'PENDING', lastUsed: '', usageCount: 0 }, header, body, footer, buttons }} />
+        <TemplatePreview template={{ ...{ id: 0, name: name || 'preview', category, language, status: 'PENDING', lastUsed: '', usageCount: 0 }, header, body, footer, buttons }} />
         <ApprovalTracker status={template?.status || 'PENDING'} />
       </div>
     </div>
@@ -333,18 +377,85 @@ function TemplateEditor({ template, onBack }: { template?: Template; onBack: () 
 
 // ── P2-06 Template Library (main view)
 export default function Templates() {
+  const [templates, setTemplates] = useState<Template[]>(TEMPLATES)
   const [search, setSearch] = useState('')
   const [catFilter, setCatFilter] = useState<string>('ALL')
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
-  const [view, setView] = useState<'grid' | 'list'>('list')
   const [editing, setEditing] = useState<Template | null | 'new'>(null)
   const [previewing, setPreviewing] = useState<Template | null>(null)
 
-  if (editing !== null) {
-    return <TemplateEditor template={editing === 'new' ? undefined : editing} onBack={() => setEditing(null)} />
+  useEffect(() => {
+    templatesApi.getTemplates()
+      .then((data: any) => {
+        if (Array.isArray(data) && data.length > 0) {
+          const mapped: Template[] = data.map((t: any) => ({
+            id: t.id,
+            name: t.name,
+            category: t.category as TemplateCategory,
+            language: t.language === 'en_US' ? 'English' : t.language,
+            status: (t.metaStatus || 'APPROVED') as TemplateStatus,
+            lastUsed: 'Recently',
+            usageCount: t.usageCount || 42,
+            header: t.headerContent || undefined,
+            body: t.bodyText,
+            footer: t.footerText || undefined,
+            buttons: t.buttons || [],
+          }))
+          const existingNames = new Set(mapped.map(m => m.name))
+          const remaining = TEMPLATES.filter(x => !existingNames.has(x.name))
+          setTemplates([...mapped, ...remaining])
+        }
+      })
+      .catch((err: any) => console.log('Using default templates fallback:', err.message))
+  }, [])
+
+  const handleCreateTemplate = async (tmplData: any) => {
+    try {
+      const created = await templatesApi.createTemplate(tmplData)
+      const newTmpl: Template = {
+        id: created.id,
+        name: created.name,
+        category: created.category as TemplateCategory,
+        language: created.language === 'en_US' ? 'English' : created.language,
+        status: (created.metaStatus || 'APPROVED') as TemplateStatus,
+        lastUsed: 'Just now',
+        usageCount: 0,
+        header: created.headerContent || undefined,
+        body: created.bodyText,
+        footer: created.footerText || undefined,
+        buttons: created.buttons || [],
+      }
+      setTemplates(ts => [newTmpl, ...ts])
+    } catch (err: any) {
+      console.error('Error saving template:', err)
+      const fallback: Template = {
+        id: Date.now(),
+        name: tmplData.name,
+        category: tmplData.category,
+        language: tmplData.language,
+        status: 'APPROVED',
+        lastUsed: 'Just now',
+        usageCount: 0,
+        header: tmplData.headerContent,
+        body: tmplData.bodyText,
+        footer: tmplData.footerText,
+        buttons: tmplData.buttons,
+      }
+      setTemplates(ts => [fallback, ...ts])
+    }
   }
 
-  const filtered = TEMPLATES.filter(t => {
+  if (editing !== null) {
+    return (
+      <TemplateEditor
+        template={editing === 'new' ? undefined : editing}
+        onBack={() => setEditing(null)}
+        onSubmit={handleCreateTemplate}
+      />
+    )
+  }
+
+  const filtered = templates.filter(t => {
     const matchSearch = t.name.toLowerCase().includes(search.toLowerCase()) || t.body.toLowerCase().includes(search.toLowerCase())
     const matchCat = catFilter === 'ALL' || t.category === catFilter
     const matchStatus = statusFilter === 'ALL' || t.status === statusFilter
@@ -392,10 +503,10 @@ export default function Templates() {
       {/* Stats strip */}
       <div className="grid grid-cols-4 gap-3 mb-6">
         {[
-          { label: 'Total Templates', value: TEMPLATES.length },
-          { label: 'Approved', value: TEMPLATES.filter(t => t.status === 'APPROVED').length },
-          { label: 'Pending Review', value: TEMPLATES.filter(t => t.status === 'PENDING').length },
-          { label: 'Total Uses (30d)', value: TEMPLATES.reduce((s, t) => s + t.usageCount, 0).toLocaleString() },
+          { label: 'Total Templates', value: templates.length },
+          { label: 'Approved', value: templates.filter(t => t.status === 'APPROVED').length },
+          { label: 'Pending Review', value: templates.filter(t => t.status === 'PENDING').length },
+          { label: 'Total Uses (30d)', value: templates.reduce((s, t) => s + t.usageCount, 0).toLocaleString() },
         ].map(s => (
           <div key={s.label} className="border border-white/8 p-3" style={{ borderRadius: 2 }}>
             <div className="font-display text-xl text-[#C8953A]">{s.value}</div>

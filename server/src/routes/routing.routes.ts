@@ -120,8 +120,8 @@ router.get('/agents', authMiddleware, async (req: AuthenticatedRequest, res: Res
 // PATCH /api/routing/agents/:id/status
 router.patch('/agents/:id/status', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
-    const { isOnline, status } = req.body;
+    const id = req.params.id as string;
+    const { isOnline } = req.body;
 
     const user = await prisma.user.findFirst({
       where: { id, organizationId: req.user!.organizationId },
@@ -157,13 +157,13 @@ router.patch('/agents/:id/status', authMiddleware, async (req: AuthenticatedRequ
 // PATCH /api/routing/rules/:id
 router.patch('/rules/:id', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
-    const { enabled, priority, name } = req.body;
+    const id = req.params.id as string;
+    const { enabled, isEnabled, priority, name } = req.body;
 
     const updated = await prisma.routingRule.updateMany({
       where: { id, organizationId: req.user!.organizationId },
       data: {
-        ...(enabled !== undefined && { enabled }),
+        ...((enabled !== undefined || isEnabled !== undefined) && { isEnabled: enabled !== undefined ? enabled : isEnabled }),
         ...(priority !== undefined && { priority }),
         ...(name && { name }),
       },

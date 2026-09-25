@@ -69,6 +69,11 @@ export const authApi = {
       method: 'PATCH',
       body: JSON.stringify(payload),
     }),
+  inviteMember: (payload: { name: string; email: string; role?: string; phone?: string }) =>
+    apiRequest('/auth/team/invite', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
 };
 
 // ── Leads API

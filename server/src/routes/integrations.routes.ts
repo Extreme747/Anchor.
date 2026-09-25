@@ -40,7 +40,7 @@ router.get('/', authMiddleware, async (req: AuthenticatedRequest, res: Response)
 // POST /api/integrations/:provider/toggle
 router.post('/:provider/toggle', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const { provider } = req.params;
+    const provider = req.params.provider as string;
     const { isEnabled } = req.body;
 
     const integration = await prisma.integration.upsert({

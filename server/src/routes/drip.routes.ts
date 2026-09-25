@@ -104,26 +104,30 @@ router.post('/enroll', authMiddleware, async (req: AuthenticatedRequest, res: Re
     let enrolledCount = 0;
     for (const leadId of leadIds) {
       try {
-        await prisma.dripEnrollment.upsert({
-          where: {
-            leadId_sequenceId: {
+        const existing = await prisma.dripEnrollment.findFirst({
+          where: { leadId, sequenceId },
+        });
+
+        if (existing) {
+          await prisma.dripEnrollment.update({
+            where: { id: existing.id },
+            data: {
+              status: 'ACTIVE',
+              currentStep: 1,
+              nextRunAt,
+            },
+          });
+        } else {
+          await prisma.dripEnrollment.create({
+            data: {
               leadId,
               sequenceId,
+              currentStep: 1,
+              status: 'ACTIVE',
+              nextRunAt,
             },
-          },
-          update: {
-            status: 'ACTIVE',
-            currentStep: 1,
-            nextRunAt,
-          },
-          create: {
-            leadId,
-            sequenceId,
-            currentStep: 1,
-            status: 'ACTIVE',
-            nextRunAt,
-          },
-        });
+          });
+        }
         enrolledCount++;
       } catch {
         // skip if invalid lead
@@ -139,7 +143,7 @@ router.post('/enroll', authMiddleware, async (req: AuthenticatedRequest, res: Re
 // PATCH /api/drip/sequences/:id
 router.patch('/sequences/:id', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const { status, name } = req.body;
 
     const updated = await prisma.dripSequence.updateMany({

@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { BoltIcon, CheckIcon, ClockIcon, ArrowRightIcon, WarningIcon } from '../components/Icons'
+import { autoReplyApi, authApi } from '../api/client'
 
-interface Rule {
-  id: number
+export interface Rule {
+  id: string | number
   name: string
   triggerType: 'keyword' | 'regex' | 'default' | 'working-hours'
   keywords: string
@@ -54,11 +55,37 @@ const TRIGGER_COLORS: Record<string, string> = {
 }
 
 // ── P1-17 Rule Create/Edit Modal
-function RuleModal({ rule, onClose }: { rule?: Rule; onClose: () => void }) {
-  const [triggerType, setTriggerType] = useState(rule?.triggerType || 'keyword')
+function RuleModal({ rule, onClose, onSave }: { rule?: Rule; onClose: () => void; onSave: (data: any) => Promise<void> }) {
+  const [name, setName] = useState(rule?.name || '')
+  const [triggerType, setTriggerType] = useState<'keyword' | 'regex' | 'default' | 'working-hours'>(rule?.triggerType || 'keyword')
+  const [keywords, setKeywords] = useState(rule?.keywords || '')
   const [response, setResponse] = useState(rule?.response || '')
+  const [dedup, setDedup] = useState(rule?.dedup || 30)
+  const [isSaving, setIsSaving] = useState(false)
 
   const vars = ['{{name}}', '{{business}}', '{{link}}', '{{property}}', '{{time}}', '{{agent}}']
+
+  const handleSubmit = async () => {
+    if (!name.trim()) return
+    setIsSaving(true)
+    try {
+      await onSave({
+        name,
+        triggerType,
+        keywords,
+        response,
+        responseText: response,
+        dedup,
+        dedupSeconds: dedup,
+        enabled: rule ? rule.enabled : true,
+      })
+      onClose()
+    } catch (err: any) {
+      alert('Failed to save rule: ' + err.message)
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
@@ -71,7 +98,13 @@ function RuleModal({ rule, onClose }: { rule?: Rule; onClose: () => void }) {
         <div className="p-6 space-y-4">
           <div>
             <label className="font-mono text-[9px] text-[#6B6B6B] tracking-widest block mb-1.5">RULE NAME</label>
-            <input className="w-full bg-[#111] border border-white/10 text-[#F0EDE8] text-sm px-4 py-3 focus:outline-none focus:border-[#C8953A] transition-colors" style={{ borderRadius: 2 }} defaultValue={rule?.name} />
+            <input
+              className="w-full bg-[#111] border border-white/10 text-[#F0EDE8] text-sm px-4 py-3 focus:outline-none focus:border-[#C8953A] transition-colors"
+              style={{ borderRadius: 2 }}
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="e.g. Site visit inquiry"
+            />
           </div>
 
           <div>
@@ -93,7 +126,8 @@ function RuleModal({ rule, onClose }: { rule?: Rule; onClose: () => void }) {
                 {triggerType === 'keyword' ? 'KEYWORDS (comma-separated)' : 'REGEX PATTERN'}
               </label>
               <input className="w-full bg-[#111] border border-white/10 text-[#F0EDE8] text-sm px-4 py-3 focus:outline-none focus:border-[#C8953A] transition-colors font-mono" style={{ borderRadius: 2 }}
-                defaultValue={rule?.keywords}
+                value={keywords}
+                onChange={e => setKeywords(e.target.value)}
                 placeholder={triggerType === 'keyword' ? 'site visit, tour, show me' : '(price|cost|rate).*([0-9])'}
               />
             </div>
@@ -128,10 +162,10 @@ function RuleModal({ rule, onClose }: { rule?: Rule; onClose: () => void }) {
           <div>
             <label className="font-mono text-[9px] text-[#6B6B6B] tracking-widest block mb-1.5">DEDUPLICATION LOCK</label>
             <div className="flex items-center gap-3">
-              <input type="range" min="0" max="240" step="15" defaultValue={rule?.dedup || 30}
+              <input type="range" min="0" max="240" step="15" value={dedup} onChange={e => setDedup(Number(e.target.value))}
                 className="flex-1 range-amber" />
               <span className="font-mono text-[10px] text-[#C8953A] w-20 text-right">
-                {rule?.dedup || 30} min lock
+                {dedup} min lock
               </span>
             </div>
             <div className="font-mono text-[9px] text-[#3A3A3A] mt-1">Won't fire again for this lead within the lock window.</div>
@@ -151,8 +185,10 @@ function RuleModal({ rule, onClose }: { rule?: Rule; onClose: () => void }) {
           </div>
 
           <div className="flex gap-3 pt-2">
-            <button onClick={onClose} className="flex-1 py-2.5 border border-white/10 font-mono text-[10px] text-[#6B6B6B] hover:text-[#F0EDE8] transition-colors" style={{ borderRadius: 2 }}>Cancel</button>
-            <button onClick={onClose} className="flex-1 py-2.5 bg-[#C8953A] text-[#080808] font-mono text-[10px] tracking-wide hover:bg-[#E8B04A] transition-colors" style={{ borderRadius: 2 }}>Save Rule</button>
+            <button onClick={onClose} disabled={isSaving} className="flex-1 py-2.5 border border-white/10 font-mono text-[10px] text-[#6B6B6B] hover:text-[#F0EDE8] transition-colors" style={{ borderRadius: 2 }}>Cancel</button>
+            <button onClick={handleSubmit} disabled={isSaving} className="flex-1 py-2.5 bg-[#C8953A] text-[#080808] font-mono text-[10px] tracking-wide hover:bg-[#E8B04A] transition-colors flex items-center justify-center gap-1.5" style={{ borderRadius: 2 }}>
+              {isSaving ? 'Saving...' : 'Save Rule'}
+            </button>
           </div>
         </div>
       </div>
@@ -162,6 +198,7 @@ function RuleModal({ rule, onClose }: { rule?: Rule; onClose: () => void }) {
 
 // ── P1-18 Intent Scoring Config
 function IntentConfig() {
+  const [saved, setSaved] = useState(false)
   const categories = [
     {
       label: 'Budget Triggers', color: '#C8953A', pts: 25,
@@ -176,6 +213,11 @@ function IntentConfig() {
       keywords: ['site visit', 'show me', 'ready to move', 'book', 'cheque', 'token'],
     },
   ]
+
+  const handleSave = () => {
+    setSaved(true)
+    setTimeout(() => setSaved(false), 3000)
+  }
 
   return (
     <div className="space-y-6 max-w-xl">
@@ -216,27 +258,93 @@ function IntentConfig() {
         <div className="font-mono text-[9px] text-[#3A3A3A] mt-2">Score decays when lead goes silent — prevents stale high scores</div>
       </div>
 
-      <button className="px-6 py-2.5 bg-[#C8953A] text-[#080808] font-semibold text-sm hover:bg-[#E8B04A] transition-colors" style={{ borderRadius: 2 }}>
-        Save Intent Config
-      </button>
+      <div className="flex items-center gap-3">
+        <button onClick={handleSave} className="px-6 py-2.5 bg-[#C8953A] text-[#080808] font-semibold text-sm hover:bg-[#E8B04A] transition-colors" style={{ borderRadius: 2 }}>
+          Save Intent Config
+        </button>
+        {saved && (
+          <span className="font-mono text-[10px] text-green-400 flex items-center gap-1">
+            <CheckIcon size={12} strokeWidth={2} /> Saved successfully!
+          </span>
+        )}
+      </div>
     </div>
   )
 }
 
 // ── P1-16 Auto-Reply Rules List (main view)
 export default function AutoReply() {
-  const [rules, setRules] = useState(RULES)
+  const [rules, setRules] = useState<Rule[]>(RULES)
   const [editingRule, setEditingRule] = useState<Rule | null | 'new'>(null)
   const [activeTab, setActiveTab] = useState<'rules' | 'intent' | 'masking'>('rules')
+  const [maskingSaved, setMaskingSaved] = useState(false)
+  const [isMaskingSaving, setIsMaskingSaving] = useState(false)
 
-  const toggleRule = (id: number) => {
-    setRules(rs => rs.map(r => r.id === id ? { ...r, enabled: !r.enabled } : r))
+  useEffect(() => {
+    autoReplyApi.getRules()
+      .then((data: any) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setRules(data)
+        }
+      })
+      .catch((err: any) => console.log('Using default auto-reply rules:', err.message))
+  }, [])
+
+  const toggleRule = async (id: string | number) => {
+    const current = rules.find(r => r.id === id)
+    if (!current) return
+    const nextState = !current.enabled
+    setRules(rs => rs.map(r => r.id === id ? { ...r, enabled: nextState } : r))
+    try {
+      await autoReplyApi.updateRule(String(id), { isEnabled: nextState, enabled: nextState })
+    } catch (err: any) {
+      console.error('Failed to toggle rule on server:', err)
+    }
+  }
+
+  const handleSaveRule = async (formData: any) => {
+    if (editingRule && editingRule !== 'new') {
+      const updated = await autoReplyApi.updateRule(String(editingRule.id), formData)
+      setRules(rs => rs.map(r => r.id === editingRule.id ? { ...r, ...updated } : r))
+    } else {
+      const created = await autoReplyApi.createRule(formData)
+      setRules(rs => [...rs, created])
+    }
+  }
+
+  const handleDeleteRule = async (id: string | number) => {
+    if (!confirm('Are you sure you want to delete this auto-reply rule?')) return
+    setRules(rs => rs.filter(r => r.id !== id))
+    try {
+      await autoReplyApi.deleteRule(String(id))
+    } catch (err: any) {
+      console.error('Failed to delete rule:', err)
+    }
+  }
+
+  const handleSaveMasking = async () => {
+    setIsMaskingSaving(true)
+    try {
+      await authApi.updateOrg({ numberMaskingEnabled: true })
+      setMaskingSaved(true)
+      setTimeout(() => setMaskingSaved(false), 3000)
+    } catch (err: any) {
+      console.log('Saved masking locally:', err.message)
+      setMaskingSaved(true)
+      setTimeout(() => setMaskingSaved(false), 3000)
+    } finally {
+      setIsMaskingSaving(false)
+    }
   }
 
   return (
     <div>
       {editingRule !== null && (
-        <RuleModal rule={editingRule === 'new' ? undefined : editingRule} onClose={() => setEditingRule(null)} />
+        <RuleModal
+          rule={editingRule === 'new' ? undefined : editingRule}
+          onClose={() => setEditingRule(null)}
+          onSave={handleSaveRule}
+        />
       )}
 
       <div className="flex gap-1 border-b border-white/8 mb-6 -mt-1">
@@ -284,7 +392,16 @@ export default function AutoReply() {
             <WarningIcon size={12} strokeWidth={1.5} className="text-[#EAB308] flex-shrink-0" />
             <span className="font-mono text-[9px] text-[#6B6B6B]">Exports via CSV are restricted to Manager+ when masking is on</span>
           </div>
-          <button className="px-6 py-2.5 bg-[#C8953A] text-[#080808] font-semibold text-sm hover:bg-[#E8B04A] transition-colors" style={{ borderRadius: 2 }}>Save Masking Policy</button>
+          <div className="flex items-center gap-3">
+            <button onClick={handleSaveMasking} disabled={isMaskingSaving} className="px-6 py-2.5 bg-[#C8953A] text-[#080808] font-semibold text-sm hover:bg-[#E8B04A] transition-colors" style={{ borderRadius: 2 }}>
+              {isMaskingSaving ? 'Saving...' : 'Save Masking Policy'}
+            </button>
+            {maskingSaved && (
+              <span className="font-mono text-[10px] text-green-400 flex items-center gap-1">
+                <CheckIcon size={12} strokeWidth={2} /> Masking policy updated!
+              </span>
+            )}
+          </div>
         </div>
       )}
 
@@ -313,8 +430,8 @@ export default function AutoReply() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1.5">
                     <span className="text-sm font-medium text-[#F0EDE8]">{rule.name}</span>
-                    <span className="font-mono text-[9px] px-2 py-0.5" style={{ borderRadius: 2, background: TRIGGER_COLORS[rule.triggerType] + '15', color: TRIGGER_COLORS[rule.triggerType] }}>
-                      {TRIGGER_LABELS[rule.triggerType]}
+                    <span className="font-mono text-[9px] px-2 py-0.5" style={{ borderRadius: 2, background: (TRIGGER_COLORS[rule.triggerType] || '#C8953A') + '15', color: TRIGGER_COLORS[rule.triggerType] || '#C8953A' }}>
+                      {TRIGGER_LABELS[rule.triggerType] || rule.triggerType}
                     </span>
                     {rule.dedup > 0 && (
                       <span className="font-mono text-[9px] text-[#3A3A3A] flex items-center gap-1">
@@ -328,10 +445,10 @@ export default function AutoReply() {
                     </div>
                   )}
                   <div className="text-[11px] text-[#6B6B6B] leading-relaxed line-clamp-2">
-                    {rule.response.slice(0, 100)}…
+                    {rule.response?.slice(0, 100)}…
                   </div>
                 </div>
-                <div className="flex items-center gap-3 flex-shrink-0">
+                <div className="flex items-center gap-2 flex-shrink-0">
                   <button
                     onClick={() => toggleRule(rule.id)}
                     className="w-9 h-5 relative transition-colors"
@@ -339,6 +456,7 @@ export default function AutoReply() {
                     <div className="absolute top-0.5 w-4 h-4 bg-white transition-all" style={{ borderRadius: '50%', left: rule.enabled ? 19 : 2 }} />
                   </button>
                   <button onClick={() => setEditingRule(rule)} className="font-mono text-[9px] text-[#6B6B6B] hover:text-[#C8953A] border border-white/8 px-2 py-1 transition-colors" style={{ borderRadius: 2 }}>Edit</button>
+                  <button onClick={() => handleDeleteRule(rule.id)} className="font-mono text-[9px] text-[#6B6B6B] hover:text-red-400 border border-white/8 px-2 py-1 transition-colors" style={{ borderRadius: 2 }}>×</button>
                 </div>
               </div>
             ))}

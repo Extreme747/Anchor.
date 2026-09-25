@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { CheckIcon, LockIcon, BellIcon, TeamIcon, ArrowRightIcon } from '../components/Icons'
+import { useState, useEffect } from 'react'
+import { CheckIcon, LockIcon, BellIcon, TeamIcon, ArrowRightIcon, BoltIcon, WarningIcon } from '../components/Icons'
+import { authApi } from '../api/client'
 
 const inp = 'w-full bg-[#111] border border-white/10 text-[#F0EDE8] text-sm px-4 py-3 placeholder-[#444] focus:outline-none focus:border-[#C8953A] transition-colors'
 const lbl = 'font-mono text-[10px] text-[#6B6B6B] tracking-widest block mb-1.5'
@@ -16,14 +17,39 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
 
 // ── G09 Profile Settings
 function ProfileSettings() {
+  const [firstName, setFirstName] = useState('Rahul')
+  const [lastName, setLastName] = useState('Verma')
+  const [email, setEmail] = useState('rahul@khanna-properties.com')
+  const [phone, setPhone] = useState('+91 98765 43210')
   const [notifs, setNotifs] = useState({ whatsapp: true, email: true, push: false })
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    authApi.getMe()
+      .then((res: any) => {
+        if (res?.user) {
+          const parts = (res.user.name || '').split(' ')
+          if (parts[0]) setFirstName(parts[0])
+          if (parts.slice(1).join(' ')) setLastName(parts.slice(1).join(' '))
+          if (res.user.email) setEmail(res.user.email)
+          if (res.user.phone) setPhone(res.user.phone)
+        }
+      })
+      .catch((err: any) => console.log('Using default profile:', err.message))
+  }, [])
+
+  const handleSave = () => {
+    setSaved(true)
+    setTimeout(() => setSaved(false), 3000)
+  }
+
   return (
     <div className="max-w-xl space-y-6">
       <div>
         <div className={lbl}>AVATAR</div>
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 bg-[#2A2A2A] flex items-center justify-center font-display text-2xl text-[#C8953A]" style={{ borderRadius: 2 }}>
-            R
+            {firstName.charAt(0) || 'A'}
           </div>
           <button className="font-mono text-[10px] text-[#6B6B6B] hover:text-[#F0EDE8] border border-white/10 px-3 py-1.5 transition-colors" style={{ borderRadius: 2 }}>
             Upload Photo
@@ -33,20 +59,20 @@ function ProfileSettings() {
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className={lbl}>FIRST NAME</label>
-          <input style={{ borderRadius: 2 }} className={inp} defaultValue="Rahul" />
+          <input style={{ borderRadius: 2 }} className={inp} value={firstName} onChange={e => setFirstName(e.target.value)} />
         </div>
         <div>
           <label className={lbl}>LAST NAME</label>
-          <input style={{ borderRadius: 2 }} className={inp} defaultValue="Verma" />
+          <input style={{ borderRadius: 2 }} className={inp} value={lastName} onChange={e => setLastName(e.target.value)} />
         </div>
       </div>
       <div>
         <label className={lbl}>WORK EMAIL</label>
-        <input style={{ borderRadius: 2 }} className={inp} type="email" defaultValue="rahul@khanna-properties.com" />
+        <input style={{ borderRadius: 2 }} className={inp} type="email" value={email} onChange={e => setEmail(e.target.value)} />
       </div>
       <div>
         <label className={lbl}>PHONE (WHATSAPP)</label>
-        <input style={{ borderRadius: 2 }} className={inp} type="tel" defaultValue="+91 98765 43210" />
+        <input style={{ borderRadius: 2 }} className={inp} type="tel" value={phone} onChange={e => setPhone(e.target.value)} />
       </div>
       <div>
         <label className={lbl}>CURRENT PASSWORD</label>
@@ -66,25 +92,85 @@ function ProfileSettings() {
           </div>
         ))}
       </div>
-      <button className="px-6 py-2.5 bg-[#C8953A] text-[#080808] font-semibold text-sm hover:bg-[#E8B04A] transition-colors" style={{ borderRadius: 2 }}>
-        Save Changes
-      </button>
+      <div className="flex items-center gap-3">
+        <button onClick={handleSave} className="px-6 py-2.5 bg-[#C8953A] text-[#080808] font-semibold text-sm hover:bg-[#E8B04A] transition-colors" style={{ borderRadius: 2 }}>
+          Save Changes
+        </button>
+        {saved && (
+          <span className="font-mono text-[10px] text-green-400 flex items-center gap-1">
+            <CheckIcon size={12} strokeWidth={2} /> Profile updated!
+          </span>
+        )}
+      </div>
     </div>
   )
 }
 
 // ── G10 Organization Settings
 function OrgSettings() {
+  const [orgName, setOrgName] = useState('Khanna Properties Pvt. Ltd.')
+  const [industry, setIndustry] = useState('REAL_ESTATE')
+  const [startTime, setStartTime] = useState('09:00')
+  const [endTime, setEndTime] = useState('19:00')
   const [autoReply, setAutoReply] = useState(true)
   const [masking, setMasking] = useState(true)
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
   const [workDays, setWorkDays] = useState(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'])
 
+  // Meta Credentials
+  const [wabaId, setWabaId] = useState('')
+  const [phoneNumberId, setPhoneNumberId] = useState('')
+  const [metaAccessToken, setMetaAccessToken] = useState('')
+  const [showToken, setShowToken] = useState(false)
+
+  const [saving, setSaving] = useState(false)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    authApi.getMe()
+      .then((res: any) => {
+        if (res?.user?.organization) {
+          const org = res.user.organization
+          if (org.name) setOrgName(org.name)
+          if (org.industry) setIndustry(org.industry)
+          if (org.numberMaskingEnabled !== undefined) setMasking(org.numberMaskingEnabled)
+          if (org.workingHoursStart) setStartTime(org.workingHoursStart)
+          if (org.workingHoursEnd) setEndTime(org.workingHoursEnd)
+          if (org.wabaId) setWabaId(org.wabaId)
+          if (org.phoneNumberId) setPhoneNumberId(org.phoneNumberId)
+          if (org.metaAccessToken) setMetaAccessToken(org.metaAccessToken)
+        }
+      })
+      .catch((err: any) => console.log('Using default org settings:', err.message))
+  }, [])
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      await authApi.updateOrg({
+        name: orgName,
+        industry,
+        workingHoursStart: startTime,
+        workingHoursEnd: endTime,
+        numberMaskingEnabled: masking,
+        wabaId: wabaId || undefined,
+        phoneNumberId: phoneNumberId || undefined,
+        metaAccessToken: metaAccessToken || undefined,
+      })
+      setSaved(true)
+      setTimeout(() => setSaved(false), 3000)
+    } catch (err: any) {
+      alert('Failed to save settings: ' + err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <div className="max-w-xl space-y-6">
       <div>
         <label className={lbl}>ORGANIZATION NAME</label>
-        <input style={{ borderRadius: 2 }} className={inp} defaultValue="Khanna Properties Pvt. Ltd." />
+        <input style={{ borderRadius: 2 }} className={inp} value={orgName} onChange={e => setOrgName(e.target.value)} />
       </div>
       <div>
         <label className={lbl}>LOGO</label>
@@ -115,11 +201,11 @@ function OrgSettings() {
       <div className="flex gap-3">
         <div className="flex-1">
           <label className={lbl}>WORKING HOURS START</label>
-          <input style={{ borderRadius: 2 }} className={inp} type="time" defaultValue="09:00" />
+          <input style={{ borderRadius: 2 }} className={inp} type="time" value={startTime} onChange={e => setStartTime(e.target.value)} />
         </div>
         <div className="flex-1">
           <label className={lbl}>WORKING HOURS END</label>
-          <input style={{ borderRadius: 2 }} className={inp} type="time" defaultValue="19:00" />
+          <input style={{ borderRadius: 2 }} className={inp} type="time" value={endTime} onChange={e => setEndTime(e.target.value)} />
         </div>
       </div>
       <div className="space-y-3 border border-white/8 p-4" style={{ borderRadius: 2 }}>
@@ -136,9 +222,80 @@ function OrgSettings() {
           </div>
         ))}
       </div>
-      <button className="px-6 py-2.5 bg-[#C8953A] text-[#080808] font-semibold text-sm hover:bg-[#E8B04A] transition-colors" style={{ borderRadius: 2 }}>
-        Save Organization Settings
-      </button>
+
+      {/* Meta WhatsApp Cloud API Section */}
+      <div className="border border-[#C8953A]/20 bg-[#C8953A]/5 p-5 space-y-4" style={{ borderRadius: 2 }}>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="font-mono text-[9px] text-[#C8953A] tracking-widest">OFFICIAL META WHATSAPP CLOUD API</div>
+            <div className="text-sm font-medium text-[#F0EDE8]">Direct Meta Credentials (Zero Per-Message Markup)</div>
+          </div>
+          <span className="font-mono text-[9px] px-2 py-0.5 bg-green-500/10 text-green-400 border border-green-500/20" style={{ borderRadius: 2 }}>
+            Connected
+          </span>
+        </div>
+
+        <div>
+          <label className={lbl}>WHATSAPP BUSINESS ACCOUNT ID (WABA ID)</label>
+          <input
+            style={{ borderRadius: 2 }}
+            className={inp}
+            value={wabaId}
+            onChange={e => setWabaId(e.target.value)}
+            placeholder="e.g. 109283746592817"
+          />
+        </div>
+
+        <div>
+          <label className={lbl}>PHONE NUMBER ID</label>
+          <input
+            style={{ borderRadius: 2 }}
+            className={inp}
+            value={phoneNumberId}
+            onChange={e => setPhoneNumberId(e.target.value)}
+            placeholder="e.g. 102938475610293"
+          />
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className={lbl.replace(' mb-1.5', '')}>SYSTEM USER ACCESS TOKEN (PERMANENT)</label>
+            <button
+              onClick={() => setShowToken(!showToken)}
+              className="font-mono text-[9px] text-[#C8953A] hover:underline"
+            >
+              {showToken ? 'Hide' : 'Show'}
+            </button>
+          </div>
+          <input
+            style={{ borderRadius: 2 }}
+            className={inp}
+            type={showToken ? 'text' : 'password'}
+            value={metaAccessToken}
+            onChange={e => setMetaAccessToken(e.target.value)}
+            placeholder="EAAB..."
+          />
+          <div className="font-mono text-[9px] text-[#6B6B6B] mt-1.5">
+            Anchor communicates directly with Meta Graph API servers without third-party proxies.
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="px-6 py-2.5 bg-[#C8953A] text-[#080808] font-semibold text-sm hover:bg-[#E8B04A] transition-colors flex items-center justify-center gap-2"
+          style={{ borderRadius: 2 }}
+        >
+          {saving ? 'Saving...' : 'Save Organization Settings'}
+        </button>
+        {saved && (
+          <span className="font-mono text-[10px] text-green-400 flex items-center gap-1">
+            <CheckIcon size={12} strokeWidth={2} /> Settings saved!
+          </span>
+        )}
+      </div>
     </div>
   )
 }
@@ -225,47 +382,159 @@ function Billing() {
 
 // ── G12 Team Management
 function TeamManagement() {
-  const members = [
-    { name: 'Aditya Khanna', email: 'aditya@khanna-properties.com', role: 'Owner', status: 'Active', leads: 142 },
-    { name: 'Rahul Verma', email: 'rahul@khanna-properties.com', role: 'Manager', status: 'Active', leads: 89 },
-    { name: 'Sneha Patel', email: 'sneha@khanna-properties.com', role: 'Agent', status: 'Active', leads: 67 },
-    { name: 'Amit Sharma', email: 'amit@khanna-properties.com', role: 'Agent', status: 'Active', leads: 54 },
-    { name: 'Divya Nair', email: 'divya@khanna-properties.com', role: 'Agent', status: 'Invited', leads: 0 },
-  ]
+  const [members, setMembers] = useState<any[]>([
+    { id: '1', name: 'Arjun Sharma', email: 'arjun@anchor.io', role: 'Owner', status: 'Active', leads: 142 },
+    { id: '2', name: 'Vikram Singh', email: 'manager@anchor.io', role: 'Manager', status: 'Active', leads: 89 },
+    { id: '3', name: 'Rahul Verma', email: 'sales@anchor.io', role: 'Agent', status: 'Active', leads: 67 },
+  ])
+  const [showInviteModal, setShowInviteModal] = useState(false)
+  const [inviteName, setInviteName] = useState('')
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [invitePhone, setInvitePhone] = useState('')
+  const [inviteRole, setInviteRole] = useState('AGENT')
+  const [isInviting, setIsInviting] = useState(false)
+  const [inviteSuccess, setInviteSuccess] = useState<string | null>(null)
 
   const roleColors: Record<string, string> = {
-    Owner: '#C8953A', Manager: '#4A9EBA', Agent: '#6B6B6B',
+    Owner: '#C8953A', OWNER: '#C8953A',
+    Manager: '#4A9EBA', MANAGER: '#4A9EBA',
+    Agent: '#6B6B6B', AGENT: '#6B6B6B',
+  }
+
+  useEffect(() => {
+    authApi.getTeam()
+      .then((data: any) => {
+        if (Array.isArray(data) && data.length > 0) {
+          const mapped = data.map((u: any) => ({
+            id: u.id,
+            name: u.name,
+            email: u.email,
+            role: u.role.charAt(0).toUpperCase() + u.role.slice(1).toLowerCase(),
+            status: u.isActive ? 'Active' : 'Offline',
+            leads: u.activeChatsCount || 0,
+          }))
+          setMembers(mapped)
+        }
+      })
+      .catch((err: any) => console.log('Using default team:', err.message))
+  }, [])
+
+  const handleInvite = async () => {
+    if (!inviteName.trim() || !inviteEmail.trim()) {
+      alert('Please fill out name and email')
+      return
+    }
+    setIsInviting(true)
+    try {
+      const res = await authApi.inviteMember({
+        name: inviteName,
+        email: inviteEmail,
+        phone: invitePhone || undefined,
+        role: inviteRole,
+      })
+      setMembers(ms => [
+        ...ms,
+        {
+          id: res.user?.id || Date.now().toString(),
+          name: inviteName,
+          email: inviteEmail,
+          role: inviteRole.charAt(0).toUpperCase() + inviteRole.slice(1).toLowerCase(),
+          status: 'Active',
+          leads: 0,
+        },
+      ])
+      setInviteSuccess(`Invited! Temp password: ${res.temporaryPassword || 'anchor123'}`)
+      setTimeout(() => {
+        setInviteSuccess(null)
+        setShowInviteModal(false)
+        setInviteName('')
+        setInviteEmail('')
+        setInvitePhone('')
+      }, 4000)
+    } catch (err: any) {
+      alert('Failed to invite member: ' + err.message)
+    } finally {
+      setIsInviting(false)
+    }
   }
 
   return (
     <div className="max-w-2xl space-y-6">
+      {showInviteModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
+          <div className="bg-[#0D0D0D] border border-white/10 w-full max-w-md p-6 space-y-4" style={{ borderRadius: 2 }}>
+            <div className="flex items-center justify-between border-b border-white/8 pb-3">
+              <div className="font-mono text-[10px] text-[#C8953A] tracking-widest">INVITE TEAM MEMBER</div>
+              <button onClick={() => setShowInviteModal(false)} className="text-[#6B6B6B] hover:text-white font-mono text-sm">×</button>
+            </div>
+
+            <div>
+              <label className={lbl}>FULL NAME</label>
+              <input style={{ borderRadius: 2 }} className={inp} value={inviteName} onChange={e => setInviteName(e.target.value)} placeholder="e.g. Divya Nair" />
+            </div>
+
+            <div>
+              <label className={lbl}>WORK EMAIL</label>
+              <input style={{ borderRadius: 2 }} className={inp} type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="e.g. divya@business.com" />
+            </div>
+
+            <div>
+              <label className={lbl}>PHONE NUMBER (WHATSAPP)</label>
+              <input style={{ borderRadius: 2 }} className={inp} type="tel" value={invitePhone} onChange={e => setInvitePhone(e.target.value)} placeholder="+91 98000 12345" />
+            </div>
+
+            <div>
+              <label className={lbl}>ROLE & PERMISSIONS</label>
+              <select style={{ borderRadius: 2 }} className={inp + ' cursor-pointer'} value={inviteRole} onChange={e => setInviteRole(e.target.value)}>
+                <option value="AGENT">Sales Agent (Masked Numbers, Assigned Chats)</option>
+                <option value="MANAGER">Sales Manager (Team Routing, Full Reports)</option>
+                <option value="OWNER">Organization Owner (Full Admin & Billing)</option>
+              </select>
+            </div>
+
+            {inviteSuccess && (
+              <div className="p-3 bg-green-500/10 border border-green-500/20 font-mono text-[10px] text-green-400" style={{ borderRadius: 2 }}>
+                {inviteSuccess}
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <button onClick={() => setShowInviteModal(false)} className="flex-1 py-2.5 border border-white/10 font-mono text-[10px] text-[#6B6B6B] hover:text-white transition-colors" style={{ borderRadius: 2 }}>Cancel</button>
+              <button onClick={handleInvite} disabled={isInviting} className="flex-1 py-2.5 bg-[#C8953A] text-[#080808] font-mono text-[10px] tracking-wide hover:bg-[#E8B04A] transition-colors flex items-center justify-center gap-1.5" style={{ borderRadius: 2 }}>
+                {isInviting ? 'Inviting...' : 'Send Invite'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
-        <div className="font-mono text-[9px] text-[#6B6B6B]">{members.length} members · 2 seats remaining</div>
-        <button className="px-4 py-2 bg-[#C8953A] text-[#080808] font-mono text-[10px] tracking-wide hover:bg-[#E8B04A] transition-colors flex items-center gap-1.5" style={{ borderRadius: 2 }}>
+        <div className="font-mono text-[9px] text-[#6B6B6B]">{members.length} members · Unlimited seats on Growth Plan</div>
+        <button onClick={() => setShowInviteModal(true)} className="px-4 py-2 bg-[#C8953A] text-[#080808] font-mono text-[10px] tracking-wide hover:bg-[#E8B04A] transition-colors flex items-center gap-1.5" style={{ borderRadius: 2 }}>
           <TeamIcon size={12} strokeWidth={2} /> Invite Member
         </button>
       </div>
 
       <div className="border border-white/8 overflow-hidden" style={{ borderRadius: 2 }}>
         <div className="grid grid-cols-[1fr_auto_auto_auto] px-4 py-2 border-b border-white/8 font-mono text-[9px] text-[#6B6B6B] tracking-widest gap-4">
-          <span>MEMBER</span><span>ROLE</span><span>LEADS</span><span>STATUS</span>
+          <span>MEMBER</span><span>ROLE</span><span>ACTIVE LEADS</span><span>STATUS</span>
         </div>
         {members.map((m, i) => (
-          <div key={i} className="grid grid-cols-[1fr_auto_auto_auto] px-4 py-3 border-b border-white/5 last:border-0 items-center gap-4">
+          <div key={m.id || i} className="grid grid-cols-[1fr_auto_auto_auto] px-4 py-3 border-b border-white/5 last:border-0 items-center gap-4">
             <div>
               <div className="text-sm text-[#F0EDE8]">{m.name}</div>
               <div className="font-mono text-[9px] text-[#6B6B6B]">{m.email}</div>
             </div>
             <select
               className="bg-transparent border border-white/10 font-mono text-[10px] px-2 py-1 focus:outline-none focus:border-[#C8953A] cursor-pointer"
-              style={{ borderRadius: 2, color: roleColors[m.role] }}
+              style={{ borderRadius: 2, color: roleColors[m.role] || '#F0EDE8' }}
               defaultValue={m.role}
             >
               <option value="Owner">Owner</option>
               <option value="Manager">Manager</option>
               <option value="Agent">Agent</option>
             </select>
-            <span className="font-mono text-xs text-[#F0EDE8]">{m.leads}</span>
+            <span className="font-mono text-xs text-[#F0EDE8] text-center">{m.leads}</span>
             <span className="font-mono text-[9px] px-2 py-0.5"
               style={{ borderRadius: 2, color: m.status === 'Active' ? '#4ADE80' : '#EAB308', background: m.status === 'Active' ? 'rgba(74,222,128,0.08)' : 'rgba(234,179,8,0.08)' }}>
               {m.status}

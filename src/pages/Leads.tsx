@@ -1,11 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   SearchIcon, TagIcon, TransferIcon, FlowIcon,
   ArrowRightIcon, CheckIcon, WarningIcon, ClockIcon,
 } from '../components/Icons'
+import { leadsApi } from '../api/client'
 
 interface Lead {
-  id: number; name: string; phone: string; email: string
+  id: number | string; name: string; phone: string; email: string
   company: string; city: string; source: string; status: string
   score: number; tag: string; value: string; agent: string
   created: string; lastContact: string; notes: string
@@ -143,7 +144,33 @@ function CSVImport({ onClose }: { onClose: () => void }) {
 }
 
 // ── P1-11 Lead Create/Edit Modal
-function LeadModal({ lead, onClose }: { lead?: Lead; onClose: () => void }) {
+function LeadModal({ lead, onClose, onSave }: { lead?: Lead; onClose: () => void; onSave?: () => void }) {
+  const [name, setName] = useState(lead?.name || '')
+  const [phone, setPhone] = useState(lead?.phone || '')
+  const [email, setEmail] = useState(lead?.email || '')
+  const [city, setCity] = useState(lead?.city || 'Gurugram')
+  const [source, setSource] = useState(lead?.source || 'Organic WhatsApp')
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleSubmit = async () => {
+    if (!name || !phone) return
+    setSubmitting(true)
+    try {
+      if (lead && typeof lead.id === 'string') {
+        await leadsApi.updateLead(lead.id, { name, phone, email, city, source })
+      } else {
+        await leadsApi.createLead({ name, phone, email, city, source, estimatedValueINR: 5000000 })
+      }
+      if (onSave) onSave()
+      onClose()
+    } catch (err) {
+      console.warn('Save lead fallback:', err)
+      onClose()
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
       <div className="bg-[#0D0D0D] border border-white/10 w-full max-w-md" style={{ borderRadius: 2 }}>
@@ -155,49 +182,64 @@ function LeadModal({ lead, onClose }: { lead?: Lead; onClose: () => void }) {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="font-mono text-[9px] text-[#6B6B6B] block mb-1">NAME *</label>
-              <input className="w-full bg-[#111] border border-white/10 text-[#F0EDE8] text-sm px-3 py-2 focus:outline-none focus:border-[#C8953A] transition-colors" style={{ borderRadius: 2 }} defaultValue={lead?.name} />
+              <input
+                className="w-full bg-[#111] border border-white/10 text-[#F0EDE8] text-sm px-3 py-2 focus:outline-none focus:border-[#C8953A] transition-colors"
+                style={{ borderRadius: 2 }}
+                value={name}
+                onChange={e => setName(e.target.value)}
+              />
             </div>
             <div>
               <label className="font-mono text-[9px] text-[#6B6B6B] block mb-1">PHONE *</label>
-              <input className="w-full bg-[#111] border border-white/10 text-[#F0EDE8] text-sm px-3 py-2 focus:outline-none focus:border-[#C8953A] transition-colors" style={{ borderRadius: 2 }} defaultValue={lead?.phone} />
+              <input
+                className="w-full bg-[#111] border border-white/10 text-[#F0EDE8] text-sm px-3 py-2 focus:outline-none focus:border-[#C8953A] transition-colors"
+                style={{ borderRadius: 2 }}
+                value={phone}
+                onChange={e => setPhone(e.target.value)}
+              />
             </div>
           </div>
           <div>
             <label className="font-mono text-[9px] text-[#6B6B6B] block mb-1">EMAIL</label>
-            <input className="w-full bg-[#111] border border-white/10 text-[#F0EDE8] text-sm px-3 py-2 focus:outline-none focus:border-[#C8953A] transition-colors" style={{ borderRadius: 2 }} type="email" defaultValue={lead?.email} />
+            <input
+              className="w-full bg-[#111] border border-white/10 text-[#F0EDE8] text-sm px-3 py-2 focus:outline-none focus:border-[#C8953A] transition-colors"
+              style={{ borderRadius: 2 }}
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="font-mono text-[9px] text-[#6B6B6B] block mb-1">CITY</label>
-              <input className="w-full bg-[#111] border border-white/10 text-[#F0EDE8] text-sm px-3 py-2 focus:outline-none focus:border-[#C8953A] transition-colors" style={{ borderRadius: 2 }} defaultValue={lead?.city} />
+              <input
+                className="w-full bg-[#111] border border-white/10 text-[#F0EDE8] text-sm px-3 py-2 focus:outline-none focus:border-[#C8953A] transition-colors"
+                style={{ borderRadius: 2 }}
+                value={city}
+                onChange={e => setCity(e.target.value)}
+              />
             </div>
             <div>
-              <label className="font-mono text-[9px] text-[#6B6B6B] block mb-1">LEAD VALUE</label>
-              <input className="w-full bg-[#111] border border-white/10 text-[#F0EDE8] text-sm px-3 py-2 focus:outline-none focus:border-[#C8953A] transition-colors" style={{ borderRadius: 2 }} placeholder="₹" defaultValue={lead?.value} />
+              <label className="font-mono text-[9px] text-[#6B6B6B] block mb-1">SOURCE</label>
+              <select
+                className="w-full bg-[#111] border border-white/10 text-[#F0EDE8] text-sm px-3 py-2 focus:outline-none cursor-pointer"
+                style={{ borderRadius: 2 }}
+                value={source}
+                onChange={e => setSource(e.target.value)}
+              >
+                {['Meta CTWA Ad', 'Organic WhatsApp', '99acres', 'MagicBricks', 'Housing.com', 'Manual', 'Referral'].map(s => <option key={s}>{s}</option>)}
+              </select>
             </div>
-          </div>
-          <div>
-            <label className="font-mono text-[9px] text-[#6B6B6B] block mb-1">SOURCE</label>
-            <select className="w-full bg-[#111] border border-white/10 text-[#F0EDE8] text-sm px-3 py-2 focus:outline-none cursor-pointer" style={{ borderRadius: 2 }} defaultValue={lead?.source}>
-              {['Meta Ad', 'Organic', '99acres', 'MagicBricks', 'Housing.com', 'JustDial', 'Manual', 'Referral'].map(s => <option key={s}>{s}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="font-mono text-[9px] text-[#6B6B6B] block mb-1">TAGS</label>
-            <div className="flex gap-2 flex-wrap">
-              {['Hot', 'Qualified', 'Warm', 'Cold', 'Penthouse', 'Ready-to-move', '3BHK'].map(t => (
-                <button key={t} className="font-mono text-[9px] px-2 py-0.5 border border-white/10 text-[#6B6B6B] hover:border-[#C8953A] hover:text-[#C8953A] transition-colors" style={{ borderRadius: 2 }}>{t}</button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <label className="font-mono text-[9px] text-[#6B6B6B] block mb-1">NOTES</label>
-            <textarea className="w-full bg-[#111] border border-white/10 text-[#F0EDE8] text-sm px-3 py-2 focus:outline-none focus:border-[#C8953A] transition-colors resize-none" style={{ borderRadius: 2 }} rows={3} defaultValue={lead?.notes} />
           </div>
           <div className="flex gap-3 pt-2">
             <button onClick={onClose} className="flex-1 py-2.5 border border-white/10 font-mono text-[10px] text-[#6B6B6B] hover:text-[#F0EDE8] transition-colors" style={{ borderRadius: 2 }}>Cancel</button>
-            <button onClick={onClose} className="flex-1 py-2.5 bg-[#C8953A] text-[#080808] font-mono text-[10px] tracking-wide hover:bg-[#E8B04A] transition-colors" style={{ borderRadius: 2 }}>
-              {lead ? 'Save Changes' : 'Create Lead'}
+            <button
+              onClick={handleSubmit}
+              disabled={submitting || !name || !phone}
+              className="flex-1 py-2.5 bg-[#C8953A] text-[#080808] font-mono text-[10px] tracking-wide hover:bg-[#E8B04A] transition-colors disabled:opacity-50"
+              style={{ borderRadius: 2 }}
+            >
+              {submitting ? 'Saving...' : lead ? 'Save Changes' : 'Create Lead'}
             </button>
           </div>
         </div>
@@ -231,12 +273,48 @@ function BulkBar({ count, onClear }: { count: number; onClear: () => void }) {
 export default function LeadsPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('ALL')
-  const [selected, setSelected] = useState<number[]>([])
+  const [selected, setSelected] = useState<(number | string)[]>([])
   const [showImport, setShowImport] = useState(false)
   const [editingLead, setEditingLead] = useState<Lead | null | 'new'>(null)
   const [sort, setSort] = useState<'score' | 'created' | 'value'>('score')
+  const [leadsList, setLeadsList] = useState<Lead[]>(LEADS)
 
-  const filtered = LEADS
+  const loadLeads = async () => {
+    try {
+      const data = await leadsApi.getLeads()
+      if (Array.isArray(data) && data.length > 0) {
+        const mapped: Lead[] = data.map((l: any) => ({
+          id: l.id,
+          name: l.name,
+          phone: l.phone,
+          email: l.email || '',
+          company: '',
+          city: l.city || 'Gurugram',
+          source: l.source || (l.isCtwa ? 'Meta CTWA Ad' : 'Organic WhatsApp'),
+          status: l.status,
+          score: l.intentScore,
+          tag: l.intentScore >= 80 ? 'Hot' : l.intentScore >= 50 ? 'Qualified' : 'Warm',
+          value: l.estimatedValueINR > 0 ? `₹${(l.estimatedValueINR / 100000).toFixed(0)}L` : '₹50L',
+          agent: l.assignedAgent?.name || 'Unassigned',
+          created: new Date(l.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
+          lastContact: 'Active',
+          notes: l.tags?.join(', ') || '',
+        }))
+        setLeadsList(prev => {
+          const existingIds = new Set(mapped.map(m => String(m.id)))
+          return [...mapped, ...prev.filter(p => !existingIds.has(String(p.id)))]
+        })
+      }
+    } catch (err) {
+      console.warn('Backend leads fallback:', err)
+    }
+  }
+
+  useEffect(() => {
+    loadLeads()
+  }, [])
+
+  const filtered = leadsList
     .filter(l => {
       const matchSearch = l.name.toLowerCase().includes(search.toLowerCase()) || l.phone.includes(search) || l.city.toLowerCase().includes(search.toLowerCase())
       const matchStatus = statusFilter === 'ALL' || l.status === statusFilter
@@ -247,14 +325,14 @@ export default function LeadsPage() {
       return 0
     })
 
-  const toggleSelect = (id: number) => {
+  const toggleSelect = (id: number | string) => {
     setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id])
   }
 
   return (
     <div>
       {showImport && <CSVImport onClose={() => setShowImport(false)} />}
-      {editingLead !== null && <LeadModal lead={editingLead === 'new' ? undefined : editingLead} onClose={() => setEditingLead(null)} />}
+      {editingLead !== null && <LeadModal lead={editingLead === 'new' ? undefined : editingLead} onClose={() => setEditingLead(null)} onSave={loadLeads} />}
       {selected.length > 0 && <BulkBar count={selected.length} onClear={() => setSelected([])} />}
 
       {/* Toolbar */}

@@ -230,7 +230,7 @@ router.post('/team/invite', authMiddleware, requireRole(['OWNER', 'MANAGER']), a
 });
 
 // PATCH /api/auth/org
-router.patch('/org', authMiddleware, requireRole(['OWNER']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.patch('/org', authMiddleware, requireRole(['OWNER', 'MANAGER']), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const { name, industry, numberMaskingEnabled, workingHoursStart, workingHoursEnd, wabaId, phoneNumberId, metaAccessToken } = req.body;
 

@@ -12,7 +12,7 @@ const router = Router();
 router.get('/:leadId', authMiddleware, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const orgId = req.user!.organizationId;
-    const { leadId } = req.params;
+    const leadId = req.params.leadId as string;
 
     const lead = await prisma.lead.findFirst({
       where: { id: leadId, organizationId: orgId },

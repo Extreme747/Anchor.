@@ -109,8 +109,9 @@ router.get('/:id', authMiddleware, async (req: AuthenticatedRequest, res: Respon
     });
     const shouldMask = Boolean(req.user!.role === 'AGENT' && org?.numberMaskingEnabled);
 
+    const id = req.params.id as string;
     const lead = await prisma.lead.findFirst({
-      where: { id: req.params.id, organizationId: orgId },
+      where: { id, organizationId: orgId },
       include: {
         assignedAgent: { select: { id: true, name: true, role: true } },
         messages: {
@@ -176,8 +177,9 @@ router.patch('/:id', authMiddleware, async (req: AuthenticatedRequest, res: Resp
     const orgId = req.user!.organizationId;
     const { status, tags, assignedAgentId, city, intentScore, estimatedValueINR } = req.body;
 
+    const id = req.params.id as string;
     const updated = await prisma.lead.update({
-      where: { id: req.params.id, organizationId: orgId },
+      where: { id, organizationId: orgId },
       data: {
         ...(status && { status }),
         ...(tags && { tags: JSON.stringify(tags) }),
