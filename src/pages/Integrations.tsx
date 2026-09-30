@@ -1,8 +1,14 @@
 import { useState, useEffect } from 'react'
 import {
-  BoltIcon, CheckIcon, ArrowRightIcon, WarningIcon,
-  SearchIcon, TeamIcon, IndiaFlagBlock, RupeeSymbol
-} from '../components/Icons'
+  Zap as BoltIcon,
+  Check as CheckIcon,
+  ArrowRight as ArrowRightIcon,
+  AlertTriangle as WarningIcon,
+  Search as SearchIcon,
+  Users as TeamIcon,
+  IndianRupee as RupeeSymbol
+} from 'lucide-react'
+import { IndiaFlagBlock } from '../components/Icons'
 import { integrationsApi, commerceApi } from '../api/client'
 
 // ── Types for Phase 5

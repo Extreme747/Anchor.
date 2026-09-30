@@ -1,8 +1,17 @@
 import { useState, useEffect } from 'react'
 import {
-  FlowIcon, BoltIcon, CheckIcon, ArrowRightIcon, WarningIcon,
-  RupeeSymbol, CardIcon, ClockIcon, SearchIcon, TagIcon, CmdIcon
-} from '../components/Icons'
+  GitBranch as FlowIcon,
+  Zap as BoltIcon,
+  Check as CheckIcon,
+  ArrowRight as ArrowRightIcon,
+  AlertTriangle as WarningIcon,
+  IndianRupee as RupeeSymbol,
+  CreditCard as CardIcon,
+  Clock as ClockIcon,
+  Search as SearchIcon,
+  Tag as TagIcon,
+  Command as CmdIcon
+} from 'lucide-react'
 import { commerceApi, leadsApi } from '../api/client'
 
 // ── Types for Phase 3

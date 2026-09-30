@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { 
   AlertTriangle, Flame, Clock, ShieldAlert, CheckCircle2, 
-  Send, RefreshCw, ArrowRight 
+  Send, RefreshCw, ArrowRight, Calendar 
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { NumberCounter } from '@/components/ui/number-counter';
 import { analyticsApi, messagesApi } from '@/api/client';
 import { cn } from '@/lib/utils';
 
 export function RevenueLeakage() {
+  const [timeRange, setTimeRange] = useState<'24h' | '7d' | '30d' | '90d'>('7d');
   const [leaked, setLeaked] = useState<any[]>([
     { id: '1', name: 'Vikram Joshi', phone: '+91 91XXX XX567', value: '₹60L', reason: 'No reply for 2h 14m', recoverable: true, score: 38, time: '2h 14m ago', source: 'MagicBricks' },
     { id: '2', name: 'Neha Khanna', phone: '+91 99XXX XX112', value: '₹55L', reason: '24h window expiring in 18m — no template sent', recoverable: true, score: 29, time: '4h 32m ago', source: 'JustDial' },
@@ -18,6 +20,8 @@ export function RevenueLeakage() {
     { id: '5', name: 'Manish Tripathi', phone: '+91 88XXX XX765', value: '₹75L', reason: 'Lead uncontacted — assigned agent at capacity', recoverable: true, score: 45, time: '3h 50m ago', source: '99acres' },
   ]);
 
+  const [numericAtRisk, setNumericAtRisk] = useState(3.80);
+  const [atRiskSuffix, setAtRiskSuffix] = useState(' Cr');
   const [totalAtRisk, setTotalAtRisk] = useState('₹3.80 Cr');
   const [recoveringId, setRecoveringId] = useState<string | null>(null);
   const [recoveredIds, setRecoveredIds] = useState<string[]>([]);
@@ -27,9 +31,16 @@ export function RevenueLeakage() {
       .then((data) => {
         if (data) {
           if (data.revenueAtRiskINR) {
-            setTotalAtRisk(data.revenueAtRiskINR >= 10000000
-              ? `₹${(data.revenueAtRiskINR / 10000000).toFixed(2)} Cr`
-              : `₹${(data.revenueAtRiskINR / 100000).toFixed(1)} Lakhs`);
+            const inr = data.revenueAtRiskINR;
+            if (inr >= 10000000) {
+              setNumericAtRisk(Number((inr / 10000000).toFixed(2)));
+              setAtRiskSuffix(' Cr');
+              setTotalAtRisk(`₹${(inr / 10000000).toFixed(2)} Cr`);
+            } else {
+              setNumericAtRisk(Number((inr / 100000).toFixed(1)));
+              setAtRiskSuffix(' Lakhs');
+              setTotalAtRisk(`₹${(inr / 100000).toFixed(1)} Lakhs`);
+            }
           }
           if (Array.isArray(data.leakedLeads) && data.leakedLeads.length > 0) {
             setLeaked(data.leakedLeads.map((l: any) => ({
@@ -75,15 +86,44 @@ export function RevenueLeakage() {
 
   return (
     <div className="space-y-5">
+      {/* ── Top Bar: Date Range Filter ── */}
+      <div className="flex items-center justify-between bg-surface-sub border border-border px-3.5 py-2 rounded-md">
+        <div className="flex items-center gap-2 text-xs font-mono text-tertiary">
+          <Calendar size={13} className="text-accent" />
+          <span className="text-secondary font-medium">Monitoring Window:</span>
+        </div>
+        <div className="flex items-center gap-1 bg-canvas p-0.5 rounded border border-border">
+          {(['24h', '7d', '30d', '90d'] as const).map(range => (
+            <button
+              key={range}
+              onClick={() => setTimeRange(range)}
+              className={cn(
+                "px-2.5 py-1 font-mono text-[10px] rounded transition-colors uppercase font-medium",
+                timeRange === range
+                  ? "bg-accent text-black font-semibold shadow-xs"
+                  : "text-tertiary hover:text-primary hover:bg-surface-hover/50"
+              )}
+            >
+              {range}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* ── Killer Hero Card: Revenue at Risk ── */}
-      <Card className="p-6 border-danger/30 bg-danger/5 relative overflow-hidden text-center shadow-lg">
+      <Card className="p-6 border-danger/30 bg-danger/5 relative overflow-hidden text-center shadow-lg shadow-[inset_0_1px_0_0_rgba(248,113,113,0.15)]">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-danger/10 border border-danger/30 text-danger font-mono text-[10px] font-semibold mb-3">
           <div className="w-2 h-2 rounded-full bg-danger animate-ping" />
           <span>REVENUE LEAKAGE RADAR · ACTIVE THREAT MONITOR</span>
         </div>
 
         <div className="font-display text-5xl lg:text-6xl text-danger font-medium tracking-tight tabular-nums my-1">
-          {totalAtRisk}
+          <NumberCounter 
+            value={numericAtRisk} 
+            prefix="₹" 
+            suffix={atRiskSuffix} 
+            decimals={atRiskSuffix.includes('Cr') ? 2 : 1} 
+          />
         </div>
 
         <p className="text-xs font-mono text-tertiary max-w-md mx-auto mt-2">

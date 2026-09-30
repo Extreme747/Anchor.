@@ -1,5 +1,11 @@
 import { useState, useEffect } from 'react'
-import { BoltIcon, CheckIcon, ClockIcon, ArrowRightIcon, WarningIcon } from '../components/Icons'
+import {
+  Zap as BoltIcon,
+  Check as CheckIcon,
+  Clock as ClockIcon,
+  ArrowRight as ArrowRightIcon,
+  AlertTriangle as WarningIcon
+} from 'lucide-react'
 import { autoReplyApi, authApi } from '../api/client'
 import { toast } from '@/components/ui/toast'
 

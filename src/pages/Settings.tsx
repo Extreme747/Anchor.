@@ -1,17 +1,39 @@
 import { useState, useEffect } from 'react'
-import { CheckIcon, LockIcon, BellIcon, TeamIcon, ArrowRightIcon, BoltIcon, WarningIcon } from '../components/Icons'
+import {
+  Check as CheckIcon,
+  Lock as LockIcon,
+  Bell as BellIcon,
+  Users as TeamIcon,
+  ArrowRight as ArrowRightIcon,
+  Zap as BoltIcon,
+  AlertTriangle as WarningIcon,
+  Upload,
+} from 'lucide-react'
+import { motion } from 'framer-motion'
 import { authApi } from '../api/client'
 import { toast } from '@/components/ui/toast'
+import { cn } from '@/lib/utils'
 
-const inp = 'w-full bg-[#111] border border-white/10 text-[#F0EDE8] text-sm px-4 py-3 placeholder-[#444] focus:outline-none focus:border-[#C8953A] transition-colors'
-const lbl = 'font-mono text-[10px] text-[#6B6B6B] tracking-widest block mb-1.5'
+const inp = 'w-full bg-surface-sub border border-border text-primary text-xs px-3.5 py-2.5 rounded-sm placeholder-tertiary focus:outline-none focus:border-accent transition-colors font-mono'
+const lbl = 'font-mono text-[10px] text-tertiary tracking-widest block mb-1.5 uppercase font-medium'
 
 function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
-    <button onClick={onToggle}
-      className="w-10 h-6 relative flex-shrink-0 transition-colors"
-      style={{ borderRadius: 12, background: on ? '#C8953A' : 'rgba(255,255,255,0.1)' }}>
-      <div className="absolute top-1 w-4 h-4 bg-white transition-all" style={{ borderRadius: '50%', left: on ? 22 : 4 }} />
+    <button 
+      type="button"
+      onClick={onToggle}
+      className={cn(
+        "w-10 h-6 relative flex-shrink-0 transition-colors rounded-full",
+        on ? "bg-accent" : "bg-surface-hover border border-border"
+      )}
+      aria-pressed={on}
+    >
+      <div 
+        className={cn(
+          "absolute top-1 w-4 h-4 rounded-full transition-all",
+          on ? "bg-black left-[22px]" : "bg-secondary left-1"
+        )} 
+      />
     </button>
   )
 }
@@ -41,6 +63,7 @@ function ProfileSettings() {
 
   const handleSave = () => {
     setSaved(true)
+    toast.success('Advisor profile updated successfully')
     setTimeout(() => setSaved(false), 3000)
   }
 
@@ -49,43 +72,44 @@ function ProfileSettings() {
       <div>
         <div className={lbl}>AVATAR</div>
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 bg-[#2A2A2A] flex items-center justify-center font-display text-2xl text-[#C8953A]" style={{ borderRadius: 2 }}>
+          <div className="w-14 h-14 bg-surface-hover border border-border flex items-center justify-center font-display text-2xl text-accent rounded-sm shadow-inner">
             {firstName.charAt(0) || 'A'}
           </div>
-          <button className="font-mono text-[10px] text-[#6B6B6B] hover:text-[#F0EDE8] border border-white/10 px-3 py-1.5 transition-colors" style={{ borderRadius: 2 }}>
-            Upload Photo
+          <button className="font-mono text-[10px] text-tertiary hover:text-primary border border-border hover:bg-surface-hover px-3 py-1.5 transition-colors rounded-sm flex items-center gap-1.5">
+            <Upload size={12} />
+            <span>Upload Photo</span>
           </button>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className={lbl}>FIRST NAME</label>
-          <input style={{ borderRadius: 2 }} className={inp} value={firstName} onChange={e => setFirstName(e.target.value)} />
+          <input className={inp} value={firstName} onChange={e => setFirstName(e.target.value)} />
         </div>
         <div>
           <label className={lbl}>LAST NAME</label>
-          <input style={{ borderRadius: 2 }} className={inp} value={lastName} onChange={e => setLastName(e.target.value)} />
+          <input className={inp} value={lastName} onChange={e => setLastName(e.target.value)} />
         </div>
       </div>
       <div>
         <label className={lbl}>WORK EMAIL</label>
-        <input style={{ borderRadius: 2 }} className={inp} type="email" value={email} onChange={e => setEmail(e.target.value)} />
+        <input className={inp} type="email" value={email} onChange={e => setEmail(e.target.value)} />
       </div>
       <div>
         <label className={lbl}>PHONE (WHATSAPP)</label>
-        <input style={{ borderRadius: 2 }} className={inp} type="tel" value={phone} onChange={e => setPhone(e.target.value)} />
+        <input className={inp} type="tel" value={phone} onChange={e => setPhone(e.target.value)} />
       </div>
       <div>
         <label className={lbl}>CURRENT PASSWORD</label>
-        <input style={{ borderRadius: 2 }} className={inp} type="password" placeholder="Enter to change password" />
+        <input className={inp} type="password" placeholder="Enter to change password" />
       </div>
-      <div className="border border-white/8 p-4 space-y-3" style={{ borderRadius: 2 }}>
-        <div className="font-mono text-[10px] text-[#6B6B6B] tracking-widest mb-3">NOTIFICATION PREFERENCES</div>
+      <div className="border border-border p-4 space-y-3 bg-surface-card rounded-md shadow-sm">
+        <div className="font-mono text-[10px] text-tertiary tracking-widest mb-3 uppercase">NOTIFICATION PREFERENCES</div>
         {Object.entries(notifs).map(([key, val]) => (
           <div key={key} className="flex items-center justify-between">
             <div>
-              <div className="text-sm text-[#F0EDE8] capitalize">{key === 'whatsapp' ? 'WhatsApp' : key} notifications</div>
-              <div className="font-mono text-[9px] text-[#6B6B6B]">
+              <div className="text-sm text-primary capitalize">{key === 'whatsapp' ? 'WhatsApp' : key} notifications</div>
+              <div className="font-mono text-[9px] text-tertiary">
                 {key === 'whatsapp' ? 'New leads, SLA breaches' : key === 'email' ? 'Daily summary, reports' : 'Browser push alerts'}
               </div>
             </div>
@@ -94,11 +118,11 @@ function ProfileSettings() {
         ))}
       </div>
       <div className="flex items-center gap-3">
-        <button onClick={handleSave} className="px-6 py-2.5 bg-[#C8953A] text-[#080808] font-semibold text-sm hover:bg-[#E8B04A] transition-colors" style={{ borderRadius: 2 }}>
+        <button onClick={handleSave} className="px-6 py-2.5 bg-accent text-black font-semibold text-xs rounded-sm hover:bg-accent-light transition-colors">
           Save Changes
         </button>
         {saved && (
-          <span className="font-mono text-[10px] text-green-400 flex items-center gap-1">
+          <span className="font-mono text-[10px] text-success flex items-center gap-1">
             <CheckIcon size={12} strokeWidth={2} /> Profile updated!
           </span>
         )}
@@ -172,18 +196,18 @@ function OrgSettings() {
     <div className="max-w-xl space-y-6">
       <div>
         <label className={lbl}>ORGANIZATION NAME</label>
-        <input style={{ borderRadius: 2 }} className={inp} value={orgName} onChange={e => setOrgName(e.target.value)} />
+        <input className={inp} value={orgName} onChange={e => setOrgName(e.target.value)} />
       </div>
       <div>
         <label className={lbl}>LOGO</label>
-        <div className="border border-dashed border-white/10 p-6 text-center" style={{ borderRadius: 2 }}>
-          <div className="font-mono text-[10px] text-[#6B6B6B]">Drop logo here or <span className="text-[#C8953A] cursor-pointer">browse</span></div>
-          <div className="font-mono text-[9px] text-[#3A3A3A] mt-1">PNG/SVG · Max 1MB</div>
+        <div className="border border-dashed border-border p-6 text-center rounded-sm bg-surface-sub">
+          <div className="font-mono text-[10px] text-tertiary">Drop logo here or <span className="text-accent cursor-pointer hover:underline">browse</span></div>
+          <div className="font-mono text-[9px] text-tertiary mt-1">PNG/SVG · Max 1MB</div>
         </div>
       </div>
       <div>
         <label className={lbl}>TIMEZONE</label>
-        <select style={{ borderRadius: 2 }} className={inp + ' cursor-pointer'}>
+        <select className={inp + ' cursor-pointer'}>
           <option>Asia/Kolkata (IST, UTC+5:30)</option>
           <option>Asia/Dubai (GST, UTC+4:00)</option>
         </select>
@@ -193,8 +217,12 @@ function OrgSettings() {
         <div className="flex gap-2">
           {days.map(d => (
             <button key={d} onClick={() => setWorkDays(wd => wd.includes(d) ? wd.filter(x => x !== d) : [...wd, d])}
-              className="w-10 h-10 font-mono text-[10px] border transition-colors"
-              style={{ borderRadius: 2, borderColor: workDays.includes(d) ? '#C8953A' : 'rgba(255,255,255,0.08)', color: workDays.includes(d) ? '#C8953A' : '#6B6B6B', background: workDays.includes(d) ? 'rgba(200,149,58,0.08)' : 'transparent' }}>
+              className={cn(
+                "w-10 h-10 font-mono text-[10px] border transition-colors rounded-sm",
+                workDays.includes(d) 
+                  ? "border-accent text-accent bg-accent/10 font-semibold" 
+                  : "border-border text-tertiary hover:border-border-strong hover:text-primary"
+              )}>
               {d.slice(0, 2)}
             </button>
           ))}
@@ -203,22 +231,22 @@ function OrgSettings() {
       <div className="flex gap-3">
         <div className="flex-1">
           <label className={lbl}>WORKING HOURS START</label>
-          <input style={{ borderRadius: 2 }} className={inp} type="time" value={startTime} onChange={e => setStartTime(e.target.value)} />
+          <input className={inp} type="time" value={startTime} onChange={e => setStartTime(e.target.value)} />
         </div>
         <div className="flex-1">
           <label className={lbl}>WORKING HOURS END</label>
-          <input style={{ borderRadius: 2 }} className={inp} type="time" value={endTime} onChange={e => setEndTime(e.target.value)} />
+          <input className={inp} type="time" value={endTime} onChange={e => setEndTime(e.target.value)} />
         </div>
       </div>
-      <div className="space-y-3 border border-white/8 p-4" style={{ borderRadius: 2 }}>
+      <div className="space-y-3 border border-border p-4 bg-surface-card rounded-md shadow-sm">
         {[
           { label: 'Default auto-reply', sub: 'Fire auto-reply on every new conversation', state: autoReply, set: setAutoReply },
           { label: 'Phone number masking', sub: 'Agents see +91 98XXX XX210 instead of full number', state: masking, set: setMasking },
         ].map(item => (
           <div key={item.label} className="flex items-center justify-between">
             <div>
-              <div className="text-sm text-[#F0EDE8]">{item.label}</div>
-              <div className="font-mono text-[9px] text-[#6B6B6B]">{item.sub}</div>
+              <div className="text-sm text-primary">{item.label}</div>
+              <div className="font-mono text-[9px] text-tertiary">{item.sub}</div>
             </div>
             <Toggle on={item.state} onToggle={() => item.set(!item.state)} />
           </div>
@@ -226,13 +254,13 @@ function OrgSettings() {
       </div>
 
       {/* Meta WhatsApp Cloud API Section */}
-      <div className="border border-[#C8953A]/20 bg-[#C8953A]/5 p-5 space-y-4" style={{ borderRadius: 2 }}>
+      <div className="border border-accent/30 bg-accent/5 p-5 space-y-4 rounded-md shadow-sm shadow-[inset_0_1px_0_0_rgba(200,149,58,0.15)]">
         <div className="flex items-center justify-between">
           <div>
-            <div className="font-mono text-[9px] text-[#C8953A] tracking-widest">OFFICIAL META WHATSAPP CLOUD API</div>
-            <div className="text-sm font-medium text-[#F0EDE8]">Direct Meta Credentials (Zero Per-Message Markup)</div>
+            <div className="font-mono text-[9px] text-accent tracking-widest font-semibold">OFFICIAL META WHATSAPP CLOUD API</div>
+            <div className="text-sm font-medium text-primary">Direct Meta Credentials (Zero Per-Message Markup)</div>
           </div>
-          <span className="font-mono text-[9px] px-2 py-0.5 bg-green-500/10 text-green-400 border border-green-500/20" style={{ borderRadius: 2 }}>
+          <span className="font-mono text-[9px] px-2 py-0.5 bg-success/10 text-success border border-success/20 rounded-sm">
             Connected
           </span>
         </div>
@@ -240,7 +268,6 @@ function OrgSettings() {
         <div>
           <label className={lbl}>WHATSAPP BUSINESS ACCOUNT ID (WABA ID)</label>
           <input
-            style={{ borderRadius: 2 }}
             className={inp}
             value={wabaId}
             onChange={e => setWabaId(e.target.value)}
@@ -251,7 +278,6 @@ function OrgSettings() {
         <div>
           <label className={lbl}>PHONE NUMBER ID</label>
           <input
-            style={{ borderRadius: 2 }}
             className={inp}
             value={phoneNumberId}
             onChange={e => setPhoneNumberId(e.target.value)}
@@ -264,20 +290,19 @@ function OrgSettings() {
             <label className={lbl.replace(' mb-1.5', '')}>SYSTEM USER ACCESS TOKEN (PERMANENT)</label>
             <button
               onClick={() => setShowToken(!showToken)}
-              className="font-mono text-[9px] text-[#C8953A] hover:underline"
+              className="font-mono text-[9px] text-accent hover:underline"
             >
               {showToken ? 'Hide' : 'Show'}
             </button>
           </div>
           <input
-            style={{ borderRadius: 2 }}
             className={inp}
             type={showToken ? 'text' : 'password'}
             value={metaAccessToken}
             onChange={e => setMetaAccessToken(e.target.value)}
             placeholder="EAAB..."
           />
-          <div className="font-mono text-[9px] text-[#6B6B6B] mt-1.5">
+          <div className="font-mono text-[9px] text-tertiary mt-1.5">
             Anchor communicates directly with Meta Graph API servers without third-party proxies.
           </div>
         </div>
@@ -287,13 +312,12 @@ function OrgSettings() {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="px-6 py-2.5 bg-[#C8953A] text-[#080808] font-semibold text-sm hover:bg-[#E8B04A] transition-colors flex items-center justify-center gap-2"
-          style={{ borderRadius: 2 }}
+          className="px-6 py-2.5 bg-accent text-black font-semibold text-xs rounded-sm hover:bg-accent-light transition-colors flex items-center justify-center gap-2"
         >
           {saving ? 'Saving...' : 'Save Organization Settings'}
         </button>
         {saved && (
-          <span className="font-mono text-[10px] text-green-400 flex items-center gap-1">
+          <span className="font-mono text-[10px] text-success flex items-center gap-1">
             <CheckIcon size={12} strokeWidth={2} /> Settings saved!
           </span>
         )}
@@ -313,41 +337,48 @@ function Billing() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <div className="border border-[#C8953A]/20 bg-[#C8953A]/5 p-4 flex items-center justify-between" style={{ borderRadius: 2 }}>
+      <div className="border border-accent/30 bg-accent/5 p-4 flex items-center justify-between rounded-md shadow-sm">
         <div>
-          <div className="font-mono text-[10px] text-[#C8953A] tracking-widest mb-1">CURRENT PLAN</div>
-          <div className="font-display text-2xl text-[#F0EDE8]">Growth</div>
-          <div className="font-mono text-[9px] text-[#6B6B6B]">Renews on 1 Nov 2026 · ₹2,499/month</div>
+          <div className="font-mono text-[10px] text-accent tracking-widest mb-1 font-semibold">CURRENT PLAN</div>
+          <div className="font-display text-2xl text-primary">Growth</div>
+          <div className="font-mono text-[9px] text-tertiary">Renews on 1 Nov 2026 · ₹2,499/month</div>
         </div>
         <div className="text-right">
-          <div className="font-mono text-[9px] text-[#6B6B6B] mb-1">META WALLET</div>
-          <div className="font-display text-xl text-[#C8953A]">₹4,820</div>
-          <button className="font-mono text-[9px] text-[#C8953A] hover:text-[#E8B04A]">Recharge →</button>
+          <div className="font-mono text-[9px] text-tertiary mb-1">META WALLET</div>
+          <div className="font-display text-xl text-accent">₹4,820</div>
+          <button onClick={() => toast.success('Redirecting to Meta Cloud Wallet payment gateway...')} className="font-mono text-[9px] text-accent hover:text-accent-light">Recharge →</button>
         </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {plans.map(p => (
           <div key={p.name}
-            className="border p-4 flex flex-col"
-            style={{ borderRadius: 2, borderColor: p.current ? '#C8953A' : 'rgba(255,255,255,0.08)', background: p.current ? 'rgba(200,149,58,0.04)' : 'transparent' }}>
-            <div className="font-mono text-[9px] text-[#6B6B6B] tracking-widest mb-1">{p.name.toUpperCase()}</div>
-            <div className="font-display text-xl text-[#F0EDE8] mb-1">
+            className={cn(
+              "border p-4 flex flex-col rounded-md transition-colors",
+              p.current 
+                ? "border-accent bg-accent/5 shadow-xs" 
+                : "border-border bg-surface-card hover:border-border-strong"
+            )}>
+            <div className="font-mono text-[9px] text-tertiary tracking-widest mb-1 uppercase font-semibold">{p.name}</div>
+            <div className="font-display text-xl text-primary mb-1">
               {p.price ? `₹${p.price.toLocaleString()}` : 'Custom'}
             </div>
-            {p.price && <div className="font-mono text-[9px] text-[#6B6B6B] mb-3">/month</div>}
-            <div className="space-y-1 text-[10px] text-[#6B6B6B] flex-1">
+            {p.price && <div className="font-mono text-[9px] text-tertiary mb-3">/month</div>}
+            <div className="space-y-1 text-[10px] text-secondary flex-1 font-mono">
               <div>{p.leads ? `${p.leads.toLocaleString()} leads` : 'Unlimited leads'}</div>
               <div>{p.agents ? `${p.agents} agents` : 'Unlimited agents'}</div>
             </div>
             {!p.current && (
-              <button className="mt-3 w-full py-1.5 border border-white/10 font-mono text-[9px] text-[#6B6B6B] hover:border-[#C8953A] hover:text-[#C8953A] transition-colors" style={{ borderRadius: 2 }}>
+              <button 
+                onClick={() => toast.success(`Selected ${p.name} plan upgrade`)}
+                className="mt-3 w-full py-1.5 border border-border font-mono text-[9px] text-tertiary hover:border-accent hover:text-accent transition-colors rounded-sm"
+              >
                 {p.price ? 'Upgrade' : 'Contact Sales'}
               </button>
             )}
             {p.current && (
-              <div className="mt-3 flex items-center gap-1 font-mono text-[9px] text-[#C8953A]">
-                <CheckIcon size={10} strokeWidth={2.5} /> Current
+              <div className="mt-3 flex items-center gap-1 font-mono text-[9px] text-accent font-semibold">
+                <CheckIcon size={10} strokeWidth={2.5} /> Current Plan
               </div>
             )}
           </div>
@@ -355,24 +386,24 @@ function Billing() {
       </div>
 
       <div>
-        <div className="font-mono text-[10px] text-[#6B6B6B] tracking-widest mb-3">PAYMENT HISTORY</div>
-        <div className="border border-white/8 overflow-hidden" style={{ borderRadius: 2 }}>
+        <div className="font-mono text-[10px] text-tertiary tracking-widest mb-3 uppercase">PAYMENT HISTORY</div>
+        <div className="border border-border overflow-hidden rounded-md bg-surface-card shadow-sm">
           {[
             { date: '1 Oct 2026', amount: '₹2,499', desc: 'Growth Plan — Monthly', status: 'Paid' },
             { date: '1 Sep 2026', amount: '₹2,499', desc: 'Growth Plan — Monthly', status: 'Paid' },
             { date: '5 Sep 2026', amount: '₹5,000', desc: 'Meta Wallet Recharge', status: 'Paid' },
           ].map((row, i) => (
-            <div key={i} className="flex items-center justify-between px-4 py-3 border-b border-white/5 last:border-0">
+            <div key={i} className="flex items-center justify-between px-4 py-3 border-b border-border/50 last:border-0">
               <div>
-                <div className="text-sm text-[#F0EDE8]">{row.desc}</div>
-                <div className="font-mono text-[9px] text-[#6B6B6B]">{row.date}</div>
+                <div className="text-sm text-primary">{row.desc}</div>
+                <div className="font-mono text-[9px] text-tertiary">{row.date}</div>
               </div>
               <div className="flex items-center gap-3">
-                <span className="font-mono text-sm text-[#C8953A]">{row.amount}</span>
-                <span className="font-mono text-[9px] px-2 py-0.5 text-green-400 border border-green-400/20 bg-green-400/5" style={{ borderRadius: 2 }}>
+                <span className="font-mono text-sm text-accent font-semibold">{row.amount}</span>
+                <span className="font-mono text-[9px] px-2 py-0.5 text-success border border-success/20 bg-success/10 rounded-sm">
                   {row.status}
                 </span>
-                <button className="font-mono text-[9px] text-[#6B6B6B] hover:text-[#F0EDE8]">PDF</button>
+                <button onClick={() => toast.success(`Downloading tax invoice for ${row.date}`)} className="font-mono text-[9px] text-tertiary hover:text-primary">PDF</button>
               </div>
             </div>
           ))}
@@ -398,9 +429,9 @@ function TeamManagement() {
   const [inviteSuccess, setInviteSuccess] = useState<string | null>(null)
 
   const roleColors: Record<string, string> = {
-    Owner: '#C8953A', OWNER: '#C8953A',
-    Manager: '#4A9EBA', MANAGER: '#4A9EBA',
-    Agent: '#6B6B6B', AGENT: '#6B6B6B',
+    Owner: 'text-accent', OWNER: 'text-accent',
+    Manager: 'text-info', MANAGER: 'text-info',
+    Agent: 'text-secondary', AGENT: 'text-secondary',
   }
 
   useEffect(() => {
@@ -453,7 +484,7 @@ function TeamManagement() {
         setInviteName('')
         setInviteEmail('')
         setInvitePhone('')
-      }, 4000)
+      }, 3000)
     } catch (err: any) {
       toast.error('Failed to invite member: ' + err.message)
     } finally {
@@ -464,31 +495,31 @@ function TeamManagement() {
   return (
     <div className="max-w-2xl space-y-6">
       {showInviteModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
-          <div className="bg-[#0D0D0D] border border-white/10 w-full max-w-md p-6 space-y-4" style={{ borderRadius: 2 }}>
-            <div className="flex items-center justify-between border-b border-white/8 pb-3">
-              <div className="font-mono text-[10px] text-[#C8953A] tracking-widest">INVITE TEAM MEMBER</div>
-              <button onClick={() => setShowInviteModal(false)} className="text-[#6B6B6B] hover:text-white font-mono text-sm">×</button>
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center z-50 px-4">
+          <div className="bg-surface-card border border-border-strong w-full max-w-md p-6 space-y-4 rounded-md shadow-2xl">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <div className="font-mono text-[10px] text-accent tracking-widest font-semibold">INVITE TEAM ADVISOR</div>
+              <button onClick={() => setShowInviteModal(false)} className="text-tertiary hover:text-primary font-mono text-sm">×</button>
             </div>
 
             <div>
               <label className={lbl}>FULL NAME</label>
-              <input style={{ borderRadius: 2 }} className={inp} value={inviteName} onChange={e => setInviteName(e.target.value)} placeholder="e.g. Divya Nair" />
+              <input className={inp} value={inviteName} onChange={e => setInviteName(e.target.value)} placeholder="e.g. Divya Nair" />
             </div>
 
             <div>
               <label className={lbl}>WORK EMAIL</label>
-              <input style={{ borderRadius: 2 }} className={inp} type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="e.g. divya@business.com" />
+              <input className={inp} type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="e.g. divya@business.com" />
             </div>
 
             <div>
               <label className={lbl}>PHONE NUMBER (WHATSAPP)</label>
-              <input style={{ borderRadius: 2 }} className={inp} type="tel" value={invitePhone} onChange={e => setInvitePhone(e.target.value)} placeholder="+91 98000 12345" />
+              <input className={inp} type="tel" value={invitePhone} onChange={e => setInvitePhone(e.target.value)} placeholder="+91 98000 12345" />
             </div>
 
             <div>
               <label className={lbl}>ROLE & PERMISSIONS</label>
-              <select style={{ borderRadius: 2 }} className={inp + ' cursor-pointer'} value={inviteRole} onChange={e => setInviteRole(e.target.value)}>
+              <select className={inp + ' cursor-pointer'} value={inviteRole} onChange={e => setInviteRole(e.target.value)}>
                 <option value="AGENT">Sales Agent (Masked Numbers, Assigned Chats)</option>
                 <option value="MANAGER">Sales Manager (Team Routing, Full Reports)</option>
                 <option value="OWNER">Organization Owner (Full Admin & Billing)</option>
@@ -496,14 +527,14 @@ function TeamManagement() {
             </div>
 
             {inviteSuccess && (
-              <div className="p-3 bg-green-500/10 border border-green-500/20 font-mono text-[10px] text-green-400" style={{ borderRadius: 2 }}>
+              <div className="p-3 bg-success/10 border border-success/20 font-mono text-[10px] text-success rounded-sm">
                 {inviteSuccess}
               </div>
             )}
 
             <div className="flex gap-3 pt-2">
-              <button onClick={() => setShowInviteModal(false)} className="flex-1 py-2.5 border border-white/10 font-mono text-[10px] text-[#6B6B6B] hover:text-white transition-colors" style={{ borderRadius: 2 }}>Cancel</button>
-              <button onClick={handleInvite} disabled={isInviting} className="flex-1 py-2.5 bg-[#C8953A] text-[#080808] font-mono text-[10px] tracking-wide hover:bg-[#E8B04A] transition-colors flex items-center justify-center gap-1.5" style={{ borderRadius: 2 }}>
+              <button onClick={() => setShowInviteModal(false)} className="flex-1 py-2.5 border border-border font-mono text-[10px] text-tertiary hover:text-primary transition-colors rounded-sm">Cancel</button>
+              <button onClick={handleInvite} disabled={isInviting} className="flex-1 py-2.5 bg-accent text-black font-mono text-[10px] font-semibold tracking-wide hover:bg-accent-light transition-colors rounded-sm flex items-center justify-center gap-1.5">
                 {isInviting ? 'Inviting...' : 'Send Invite'}
               </button>
             </div>
@@ -512,34 +543,37 @@ function TeamManagement() {
       )}
 
       <div className="flex items-center justify-between">
-        <div className="font-mono text-[9px] text-[#6B6B6B]">{members.length} members · Unlimited seats on Growth Plan</div>
-        <button onClick={() => setShowInviteModal(true)} className="px-4 py-2 bg-[#C8953A] text-[#080808] font-mono text-[10px] tracking-wide hover:bg-[#E8B04A] transition-colors flex items-center gap-1.5" style={{ borderRadius: 2 }}>
+        <div className="font-mono text-[9px] text-tertiary">{members.length} members · Unlimited seats on Growth Plan</div>
+        <button onClick={() => setShowInviteModal(true)} className="px-4 py-2 bg-accent text-black font-mono text-[10px] font-semibold tracking-wide hover:bg-accent-light transition-colors flex items-center gap-1.5 rounded-sm">
           <TeamIcon size={12} strokeWidth={2} /> Invite Member
         </button>
       </div>
 
-      <div className="border border-white/8 overflow-hidden" style={{ borderRadius: 2 }}>
-        <div className="grid grid-cols-[1fr_auto_auto_auto] px-4 py-2 border-b border-white/8 font-mono text-[9px] text-[#6B6B6B] tracking-widest gap-4">
+      <div className="border border-border overflow-hidden rounded-md bg-surface-card shadow-sm">
+        <div className="grid grid-cols-[1fr_auto_auto_auto] px-4 py-2.5 border-b border-border font-mono text-[9px] text-tertiary tracking-widest gap-4 uppercase bg-surface-sub">
           <span>MEMBER</span><span>ROLE</span><span>ACTIVE LEADS</span><span>STATUS</span>
         </div>
         {members.map((m, i) => (
-          <div key={m.id || i} className="grid grid-cols-[1fr_auto_auto_auto] px-4 py-3 border-b border-white/5 last:border-0 items-center gap-4">
+          <div key={m.id || i} className="grid grid-cols-[1fr_auto_auto_auto] px-4 py-3 border-b border-border/50 last:border-0 items-center gap-4">
             <div>
-              <div className="text-sm text-[#F0EDE8]">{m.name}</div>
-              <div className="font-mono text-[9px] text-[#6B6B6B]">{m.email}</div>
+              <div className="text-xs font-medium text-primary">{m.name}</div>
+              <div className="font-mono text-[9px] text-tertiary">{m.email}</div>
             </div>
             <select
-              className="bg-transparent border border-white/10 font-mono text-[10px] px-2 py-1 focus:outline-none focus:border-[#C8953A] cursor-pointer"
-              style={{ borderRadius: 2, color: roleColors[m.role] || '#F0EDE8' }}
+              className={cn("bg-surface-sub border border-border font-mono text-[10px] px-2 py-1 focus:outline-none focus:border-accent cursor-pointer rounded-sm", roleColors[m.role] || 'text-primary')}
               defaultValue={m.role}
             >
               <option value="Owner">Owner</option>
               <option value="Manager">Manager</option>
               <option value="Agent">Agent</option>
             </select>
-            <span className="font-mono text-xs text-[#F0EDE8] text-center">{m.leads}</span>
-            <span className="font-mono text-[9px] px-2 py-0.5"
-              style={{ borderRadius: 2, color: m.status === 'Active' ? '#4ADE80' : '#EAB308', background: m.status === 'Active' ? 'rgba(74,222,128,0.08)' : 'rgba(234,179,8,0.08)' }}>
+            <span className="font-mono text-xs text-primary text-center font-semibold">{m.leads}</span>
+            <span className={cn(
+              "font-mono text-[9px] px-2 py-0.5 rounded-sm border",
+              m.status === 'Active' 
+                ? "text-success border-success/20 bg-success/10" 
+                : "text-warning border-warning/20 bg-warning/10"
+            )}>
               {m.status}
             </span>
           </div>
@@ -550,7 +584,7 @@ function TeamManagement() {
 }
 
 // ── Main Settings export
-type SettingsTab = 'profile' | 'organization' | 'billing' | 'team' | 'notifications'
+type SettingsTab = 'profile' | 'organization' | 'billing' | 'team'
 
 export default function Settings({ tab = 'profile' }: { tab?: SettingsTab }) {
   const [activeTab, setActiveTab] = useState<SettingsTab>(tab)
@@ -564,14 +598,30 @@ export default function Settings({ tab = 'profile' }: { tab?: SettingsTab }) {
 
   return (
     <div>
-      <div className="flex gap-1 border-b border-white/8 mb-6 -mt-1">
-        {tabs.map(t => (
-          <button key={t.id} onClick={() => setActiveTab(t.id)}
-            className="px-4 py-2.5 font-mono text-[10px] tracking-wide transition-colors border-b-2 -mb-px"
-            style={{ borderColor: activeTab === t.id ? '#C8953A' : 'transparent', color: activeTab === t.id ? '#C8953A' : '#6B6B6B' }}>
-            {t.label.toUpperCase()}
-          </button>
-        ))}
+      {/* Vercel-style sliding pill tabs */}
+      <div className="flex gap-1.5 p-1 bg-surface-sub rounded-md border border-border mb-6 -mt-1 overflow-x-auto scrollbar-hide">
+        {tabs.map(t => {
+          const isActive = activeTab === t.id
+          return (
+            <button
+              key={t.id}
+              onClick={() => setActiveTab(t.id)}
+              className={cn(
+                "relative z-10 px-4 py-1.5 font-mono text-[11px] font-medium rounded-sm transition-colors whitespace-nowrap",
+                isActive ? "text-black font-semibold" : "text-tertiary hover:text-primary hover:bg-surface-hover/50"
+              )}
+            >
+              {isActive && (
+                <motion.div
+                  layoutId="active-settings-tab"
+                  className="absolute inset-0 bg-accent rounded-sm -z-10 shadow-sm"
+                  transition={{ type: "spring", stiffness: 350, damping: 28 }}
+                />
+              )}
+              {t.label}
+            </button>
+          )
+        })}
       </div>
       {activeTab === 'profile' && <ProfileSettings />}
       {activeTab === 'organization' && <OrgSettings />}

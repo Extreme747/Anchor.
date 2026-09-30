@@ -17,8 +17,14 @@ export function KeyboardHint({ onOpenCommandPalette }: KeyboardHintProps) {
       className="fixed bottom-4 right-4 z-40 hidden md:flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-surface-card/90 border border-border-strong shadow-lg backdrop-blur-md text-xs text-tertiary select-none animate-in fade-in slide-in-from-bottom-2 duration-300"
     >
       <Sparkles size={12} className="text-accent shrink-0" />
-      <span className="text-[11px] text-secondary">
-        Pro tip: Press <button onClick={onOpenCommandPalette} className="inline-flex mx-1 focus:outline-none"><Kbd keys={["⌘", "K"]} /></button> to jump anywhere or <Kbd keys={["G", "I"]} /> for inbox
+      <span className="text-[11px] text-secondary flex items-center gap-1">
+        <span>Tip: Press</span>
+        <Kbd keys={["J", "/", "K"]} />
+        <span>to move leads ·</span>
+        <button onClick={onOpenCommandPalette} className="inline-flex mx-0.5 focus:outline-none" aria-label="Open command palette">
+          <Kbd keys={["⌘", "K"]} />
+        </button>
+        <span>to jump anywhere</span>
       </span>
       <button 
         onClick={() => setDismissed(true)}

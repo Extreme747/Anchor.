@@ -1,8 +1,14 @@
 import { useState } from 'react'
 import {
-  BoltIcon, CheckIcon, WarningIcon, ClockIcon, LockIcon,
-  RupeeSymbol, ArrowRightIcon, ShieldIcon
-} from '../components/Icons'
+  Zap as BoltIcon,
+  Check as CheckIcon,
+  AlertTriangle as WarningIcon,
+  Clock as ClockIcon,
+  Lock as LockIcon,
+  IndianRupee as RupeeSymbol,
+  ArrowRight as ArrowRightIcon,
+  Shield as ShieldIcon
+} from 'lucide-react'
 import { toast } from '@/components/ui/toast'
 
 // ── Types for Phase 0

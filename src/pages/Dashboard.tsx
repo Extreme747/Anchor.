@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link } from '../router'
+import { useState, useEffect } from 'react'
+import { Link, useRouter, type Page } from '../router'
 import {
   Inbox as InboxIcon,
   BarChart3,
@@ -25,7 +25,7 @@ import Commerce from './Commerce'
 import Routing from './Routing'
 import Integrations from './Integrations'
 import Protocol from './Protocol'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Avatar } from '@/components/ui/avatar'
@@ -65,15 +65,49 @@ const tabContent: Record<string, React.ReactNode> = {
 }
 
 export default function Dashboard() {
-  const [activeNav, setActiveNav] = useState('inbox')
+  const { page, navigate } = useRouter()
+
+  const getTabFromPage = (p: string) => {
+    if (p.startsWith('dashboard/')) {
+      const tab = p.replace('dashboard/', '')
+      if (tab === 'inbox' || tabContent[tab]) return tab
+    }
+    return 'inbox'
+  }
+
+  const [activeNav, setActiveNavState] = useState(() => getTabFromPage(page))
   const [isCommandOpen, setIsCommandOpen] = useState(false)
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false)
+
+  // Sync state if URL hash changes externally
+  useEffect(() => {
+    const tab = getTabFromPage(page)
+    setActiveNavState(tab)
+  }, [page])
+
+  const setActiveNav = (tab: string) => {
+    setActiveNavState(tab)
+    navigate(('dashboard/' + tab) as Page)
+  }
 
   // Global Keyboard Shortcuts (Cmd+K, Cmd+N, chords G->I, G->L, G->A, G->S, G->D)
   useKeyboardShortcuts({
     onNavigate: setActiveNav,
     onOpenCommandPalette: () => setIsCommandOpen(true),
   })
+
+  // Listen for ? key to open keyboard shortcuts modal
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+        e.preventDefault()
+        setIsShortcutsOpen(prev => !prev)
+      }
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [])
 
   return (
     <div className="flex h-screen bg-canvas overflow-hidden">
@@ -181,22 +215,34 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Content area */}
-        {activeNav === 'inbox' ? (
-          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            <Inbox />
-          </div>
-        ) : (
-          <motion.div 
-            key={activeNav}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.16, ease: "easeOut" }}
-            className="flex-1 overflow-y-auto p-4"
-          >
-            {tabContent[activeNav]}
-          </motion.div>
-        )}
+        {/* Content area with AnimatePresence */}
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <AnimatePresence mode="wait" initial={false}>
+            {activeNav === 'inbox' ? (
+              <motion.div
+                key="inbox"
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.16, ease: "easeOut" }}
+                className="flex-1 flex flex-col min-h-0 overflow-hidden"
+              >
+                <Inbox />
+              </motion.div>
+            ) : (
+              <motion.div 
+                key={activeNav}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.16, ease: "easeOut" }}
+                className="flex-1 overflow-y-auto p-4"
+              >
+                {tabContent[activeNav]}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
       {/* Global Command Palette (Cmd+K) */}

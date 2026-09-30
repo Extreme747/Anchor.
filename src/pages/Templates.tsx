@@ -1,8 +1,14 @@
 import { useState, useEffect } from 'react'
 import {
-  SearchIcon, CheckIcon, ArrowRightIcon, BoltIcon,
-  ClockIcon, WarningIcon, TagIcon, SendIcon,
-} from '../components/Icons'
+  Search as SearchIcon,
+  Check as CheckIcon,
+  ArrowRight as ArrowRightIcon,
+  Zap as BoltIcon,
+  Clock as ClockIcon,
+  AlertTriangle as WarningIcon,
+  Tag as TagIcon,
+  Send as SendIcon,
+} from 'lucide-react'
 import { templatesApi } from '../api/client'
 import { toast } from '@/components/ui/toast'
 

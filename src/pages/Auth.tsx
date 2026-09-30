@@ -1,22 +1,23 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from '../router'
-import { AnchorIcon, LockIcon, BoltIcon, CheckIcon, ArrowRightIcon } from '../components/Icons'
+import { Anchor as AnchorIcon, Lock as LockIcon, Zap as BoltIcon, Check as CheckIcon, ArrowRight as ArrowRightIcon } from 'lucide-react'
 
 import { authApi } from '../api/client'
 
 // ── Shared input style
-const inp = 'w-full bg-[#111] border border-white/10 text-[#F0EDE8] text-sm px-4 py-3 placeholder-[#444] focus:outline-none focus:border-[#C8953A] transition-colors'
+const inp = 'w-full bg-surface-sub border border-border text-primary text-xs px-3.5 py-2.5 rounded-sm placeholder-tertiary focus:outline-none focus:border-accent transition-colors font-mono'
 
 function AuthShell({ children, title, sub }: { children: React.ReactNode; title: string; sub: string }) {
   return (
-    <div className="min-h-screen bg-[#080808] flex flex-col items-center justify-center px-4">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen bg-canvas text-primary relative overflow-hidden flex flex-col items-center justify-center px-4">
+      <div className="ambient-mesh pointer-events-none" />
+      <div className="w-full max-w-sm relative z-10">
         <div className="flex flex-col items-center mb-10">
-          <div className="w-10 h-10 border border-white/10 flex items-center justify-center mb-6 text-[#C8953A]" style={{ borderRadius: 2 }}>
+          <div className="w-10 h-10 border border-border bg-surface-card flex items-center justify-center mb-6 text-accent rounded-sm shadow-sm">
             <AnchorIcon size={20} strokeWidth={1.5} />
           </div>
-          <h1 className="font-display text-3xl text-[#F0EDE8] text-center">{title}</h1>
-          <p className="font-mono text-xs text-[#6B6B6B] mt-2 text-center tracking-wide">{sub}</p>
+          <h1 className="font-display text-3xl text-primary text-center">{title}</h1>
+          <p className="font-mono text-xs text-tertiary mt-2 text-center tracking-wide">{sub}</p>
         </div>
         {children}
       </div>

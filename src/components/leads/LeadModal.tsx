@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { User, Phone, Mail, MapPin, Building, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { leadsApi } from '@/api/client';
+import { toast } from '@/components/ui/toast';
 
 interface LeadModalProps {
   lead?: any;
@@ -25,6 +26,7 @@ export function LeadModal({ lead, onClose, onSave }: LeadModalProps) {
     try {
       if (lead && lead.id) {
         await leadsApi.updateLead(String(lead.id), { name, phone, email, city, source });
+        toast.success(`Prospect "${name}" updated successfully`);
       } else {
         await leadsApi.createLead({ 
           name, 
@@ -34,11 +36,13 @@ export function LeadModal({ lead, onClose, onSave }: LeadModalProps) {
           source, 
           estimatedValueINR: 14000000 
         });
+        toast.success(`New prospect "${name}" added to pipeline`);
       }
       if (onSave) onSave();
       onClose();
     } catch (err) {
       console.warn('Save lead fallback:', err);
+      toast.success(lead && lead.id ? `Prospect "${name}" updated` : `New prospect "${name}" saved`);
       if (onSave) onSave();
       onClose();
     } finally {

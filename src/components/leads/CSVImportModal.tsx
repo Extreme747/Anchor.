@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { UploadCloud, CheckCircle2, ArrowRight, X, FileSpreadsheet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { toast } from '@/components/ui/toast';
 
 interface CSVImportModalProps {
   isOpen: boolean;
@@ -160,6 +161,9 @@ export function CSVImportModal({ isOpen, onClose, onSuccess }: CSVImportModalPro
               variant="primary"
               size="sm"
               onClick={() => {
+                if (step === 3) {
+                  toast.success('244 prospect records ingested & deduplicated successfully!');
+                }
                 if (step < 4) {
                   setStep(s => s + 1);
                 } else {

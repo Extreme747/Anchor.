@@ -25,7 +25,8 @@ function AppShell() {
   if (page === 'dashboard' || page.startsWith('dashboard/')) return <Dashboard />
 
   return (
-    <div className="min-h-screen bg-canvas text-primary">
+    <div className="min-h-screen bg-canvas text-primary relative overflow-x-hidden">
+      <div className="ambient-mesh pointer-events-none" />
       <Nav />
       <main>
         {page === 'home' && <Home />}

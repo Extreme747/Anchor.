@@ -265,7 +265,25 @@ export function ChatPanel({ lead, onBack, onToggleIntel, showIntelToggle }: Chat
                   <span className="font-mono text-[9px] text-tertiary">{time}</span>
                   {isAgent && (
                     <span className="text-tertiary flex items-center ml-0.5">
-                      {msg.status === 'sending' && <span className="text-[10px] animate-pulse">...</span>}
+                      {msg.status === 'sending' && (
+                        <span className="inline-flex items-center gap-0.5 ml-1" aria-label="Sending message">
+                          <motion.span 
+                            className="w-1 h-1 rounded-full bg-accent inline-block"
+                            animate={{ y: [0, -3, 0] }}
+                            transition={{ duration: 0.6, repeat: Infinity, ease: "easeInOut", delay: 0 }}
+                          />
+                          <motion.span 
+                            className="w-1 h-1 rounded-full bg-accent inline-block"
+                            animate={{ y: [0, -3, 0] }}
+                            transition={{ duration: 0.6, repeat: Infinity, ease: "easeInOut", delay: 0.15 }}
+                          />
+                          <motion.span 
+                            className="w-1 h-1 rounded-full bg-accent inline-block"
+                            animate={{ y: [0, -3, 0] }}
+                            transition={{ duration: 0.6, repeat: Infinity, ease: "easeInOut", delay: 0.3 }}
+                          />
+                        </span>
+                      )}
                       {msg.status === 'sent' && <Check size={12} />}
                       {msg.status === 'delivered' && <CheckCheck size={12} />}
                       {msg.status === 'read' && <CheckCheck size={12} className="text-accent" />}

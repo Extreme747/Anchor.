@@ -8,6 +8,8 @@ import { LeadCardMobile } from '@/components/leads/LeadCardMobile';
 import { CSVImportModal } from '@/components/leads/CSVImportModal';
 import { LeadModal } from '@/components/leads/LeadModal';
 import { BulkActionBar } from '@/components/leads/BulkActionBar';
+import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
 
 const DEFAULT_LEADS: Lead[] = [
@@ -33,8 +35,10 @@ export default function LeadsPage() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [leadsList, setLeadsList] = useState<Lead[]>(DEFAULT_LEADS);
   const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
 
   const loadLeads = async () => {
+    setIsLoading(true);
     try {
       const data = await leadsApi.getLeads();
       if (Array.isArray(data) && data.length > 0) {
@@ -62,6 +66,8 @@ export default function LeadsPage() {
       }
     } catch {
       // keep fallback
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -142,6 +148,18 @@ export default function LeadsPage() {
       <BulkActionBar 
         count={selected.length} 
         onClear={() => setSelected([])} 
+        onAssign={() => {
+          toast.success(`${selected.length} leads assigned to Senior Advisor Rahul Verma`);
+          setSelected([]);
+        }}
+        onEnroll={() => {
+          toast.success(`${selected.length} leads enrolled in "7-Day Luxury Drip"`);
+          setSelected([]);
+        }}
+        onTag={() => {
+          toast.success(`Tagged ${selected.length} leads with #HighIntentBuyer`);
+          setSelected([]);
+        }}
       />
 
       {/* 5-Card KPI Strip */}
@@ -217,37 +235,63 @@ export default function LeadsPage() {
         </div>
       </div>
 
-      {/* Desktop & Tablet: Semantic HTML Table */}
-      <div className="hidden md:block">
-        <LeadTable
-          leads={paginatedLeads}
-          selected={selected}
-          onToggleSelect={toggleSelect}
-          onSelectAll={selectAll}
-          onEdit={l => setEditingLead(l)}
-          sortField={sortField}
-          sortOrder={sortOrder}
-          onSort={handleSort}
-        />
-      </div>
-
-      {/* Mobile: Responsive Card Stream */}
-      <div className="md:hidden space-y-2.5">
-        {paginatedLeads.map(lead => (
-          <LeadCardMobile
-            key={lead.id}
-            lead={lead}
-            isSelected={selected.includes(lead.id)}
-            onToggleSelect={toggleSelect}
-            onEdit={l => setEditingLead(l)}
-          />
-        ))}
-        {paginatedLeads.length === 0 && (
-          <div className="text-center py-12 text-tertiary font-mono text-xs bg-surface-card rounded-md border border-border">
-            No leads matching filter
+      {/* Loading Skeleton State */}
+      {isLoading ? (
+        <div className="space-y-3 border border-border rounded-md bg-surface-card p-4 shadow-sm">
+          <div className="flex justify-between items-center pb-3 border-b border-border/60">
+            <Skeleton className="h-4 w-36" />
+            <Skeleton className="h-4 w-24" />
           </div>
-        )}
-      </div>
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="flex items-center gap-4 py-3 border-b border-border/30 last:border-0">
+              <Skeleton className="h-4 w-4 rounded-sm" />
+              <div className="space-y-1">
+                <Skeleton className="h-3.5 w-32" />
+                <Skeleton className="h-2.5 w-20" />
+              </div>
+              <Skeleton className="h-4 w-24 hidden md:block" />
+              <Skeleton className="h-5 w-16 rounded-full" />
+              <Skeleton className="h-4 w-12" />
+              <Skeleton className="h-4 w-20 hidden lg:block" />
+              <Skeleton className="h-4 w-16 ml-auto" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <>
+          {/* Desktop & Tablet: Semantic HTML Table */}
+          <div className="hidden md:block">
+            <LeadTable
+              leads={paginatedLeads}
+              selected={selected}
+              onToggleSelect={toggleSelect}
+              onSelectAll={selectAll}
+              onEdit={l => setEditingLead(l)}
+              sortField={sortField}
+              sortOrder={sortOrder}
+              onSort={handleSort}
+            />
+          </div>
+
+          {/* Mobile: Responsive Card Stream */}
+          <div className="md:hidden space-y-2.5">
+            {paginatedLeads.map(lead => (
+              <LeadCardMobile
+                key={lead.id}
+                lead={lead}
+                isSelected={selected.includes(lead.id)}
+                onToggleSelect={toggleSelect}
+                onEdit={l => setEditingLead(l)}
+              />
+            ))}
+            {paginatedLeads.length === 0 && (
+              <div className="text-center py-12 text-tertiary font-mono text-xs bg-surface-card rounded-md border border-border">
+                No leads matching filter
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
       {/* Pagination Footer */}
       <div className="flex items-center justify-between px-2 pt-2 text-xs font-mono text-tertiary">

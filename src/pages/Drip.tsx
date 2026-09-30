@@ -1,8 +1,17 @@
 import { useState, useEffect } from 'react'
 import {
-  BoltIcon, CheckIcon, ClockIcon, FlowIcon, ArrowRightIcon,
-  WarningIcon, AnalyticsIcon, TemplateIcon, RupeeSymbol
-} from '../components/Icons'
+  Zap as BoltIcon,
+  Check as CheckIcon,
+  Clock as ClockIcon,
+  GitBranch as FlowIcon,
+  ArrowRight as ArrowRightIcon,
+  AlertTriangle as WarningIcon,
+  BarChart2 as AnalyticsIcon,
+  FileText as TemplateIcon,
+  IndianRupee as RupeeSymbol
+} from 'lucide-react'
+import { motion } from 'framer-motion'
+import { cn } from '@/lib/utils'
 import { dripApi, leadsApi } from '../api/client'
 
 // ── Types
@@ -1144,25 +1153,34 @@ export default function DripSequences() {
         />
       )}
 
-      {/* Sub-tab Navigation */}
-      <div className="flex gap-1 border-b border-white/8 mb-6 -mt-1 overflow-x-auto">
+      {/* Sub-tab Navigation with sliding pill */}
+      <div className="flex gap-1.5 p-1 bg-surface-sub rounded-md border border-border mb-6 -mt-1 overflow-x-auto scrollbar-hide">
         {[
           { id: 'sequences', label: 'Cadence Sequences' },
           { id: 'ab_tests', label: 'A/B Testing Experiments' },
           { id: 'optimizer', label: 'Meta Protocol & Cost Optimizer' },
-        ].map(t => (
-          <button
-            key={t.id}
-            onClick={() => setActiveTab(t.id as typeof activeTab)}
-            className="px-4 py-2.5 font-mono text-[10px] tracking-wide transition-colors border-b-2 -mb-px flex-shrink-0"
-            style={{
-              borderColor: activeTab === t.id ? '#C8953A' : 'transparent',
-              color: activeTab === t.id ? '#C8953A' : '#6B6B6B',
-            }}
-          >
-            {t.label.toUpperCase()}
-          </button>
-        ))}
+        ].map(t => {
+          const isActive = activeTab === t.id
+          return (
+            <button
+              key={t.id}
+              onClick={() => setActiveTab(t.id as typeof activeTab)}
+              className={cn(
+                "relative z-10 px-4 py-1.5 font-mono text-[11px] font-medium rounded-sm transition-colors whitespace-nowrap",
+                isActive ? "text-black font-semibold" : "text-tertiary hover:text-primary hover:bg-surface-hover/50"
+              )}
+            >
+              {isActive && (
+                <motion.div
+                  layoutId="active-drip-tab"
+                  className="absolute inset-0 bg-accent rounded-sm -z-10 shadow-sm"
+                  transition={{ type: "spring", stiffness: 350, damping: 28 }}
+                />
+              )}
+              {t.label}
+            </button>
+          )
+        })}
       </div>
 
       {activeTab === 'ab_tests' && <ABTestingView />}

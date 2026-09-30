@@ -1,8 +1,16 @@
 import { useState, useEffect } from 'react'
 import {
-  TeamIcon, BoltIcon, CheckIcon, WarningIcon, ClockIcon,
-  ShieldIcon, LockIcon, ArrowRightIcon
-} from '../components/Icons'
+  Users as TeamIcon,
+  Zap as BoltIcon,
+  Check as CheckIcon,
+  AlertTriangle as WarningIcon,
+  Clock as ClockIcon,
+  Shield as ShieldIcon,
+  Lock as LockIcon,
+  ArrowRight as ArrowRightIcon
+} from 'lucide-react'
+import { motion } from 'framer-motion'
+import { cn } from '@/lib/utils'
 import { routingApi } from '../api/client'
 
 // ── Types for Phase 4
@@ -480,26 +488,35 @@ export default function Routing() {
 
   return (
     <div>
-      {/* Sub-tab Navigation */}
-      <div className="flex gap-1 border-b border-white/8 mb-6 -mt-1 overflow-x-auto">
+      {/* Sub-tab Navigation with sliding pill */}
+      <div className="flex gap-1.5 p-1 bg-surface-sub rounded-md border border-border mb-6 -mt-1 overflow-x-auto scrollbar-hide">
         {[
           { id: 'rules', label: 'Lead Distribution Rules' },
           { id: 'sla', label: 'SLA & Auto-Escalation' },
           { id: 'agents', label: 'Agent Availability Board' },
           { id: 'security', label: 'Security & Tally ERP Sync' },
-        ].map(t => (
-          <button
-            key={t.id}
-            onClick={() => setActiveTab(t.id as typeof activeTab)}
-            className="px-4 py-2.5 font-mono text-[10px] tracking-wide transition-colors border-b-2 -mb-px flex-shrink-0"
-            style={{
-              borderColor: activeTab === t.id ? '#C8953A' : 'transparent',
-              color: activeTab === t.id ? '#C8953A' : '#6B6B6B',
-            }}
-          >
-            {t.label.toUpperCase()}
-          </button>
-        ))}
+        ].map(t => {
+          const isActive = activeTab === t.id
+          return (
+            <button
+              key={t.id}
+              onClick={() => setActiveTab(t.id as typeof activeTab)}
+              className={cn(
+                "relative z-10 px-4 py-1.5 font-mono text-[11px] font-medium rounded-sm transition-colors whitespace-nowrap",
+                isActive ? "text-black font-semibold" : "text-tertiary hover:text-primary hover:bg-surface-hover/50"
+              )}
+            >
+              {isActive && (
+                <motion.div
+                  layoutId="active-routing-tab"
+                  className="absolute inset-0 bg-accent rounded-sm -z-10 shadow-sm"
+                  transition={{ type: "spring", stiffness: 350, damping: 28 }}
+                />
+              )}
+              {t.label}
+            </button>
+          )
+        })}
       </div>
 
       {activeTab === 'sla' && <SLAConfigView />}

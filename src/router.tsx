@@ -7,6 +7,8 @@ export type Page =
   | 'dashboard'
   | 'dashboard/inbox' | 'dashboard/analytics' | 'dashboard/drip'
   | 'dashboard/templates' | 'dashboard/team' | 'dashboard/settings'
+  | 'dashboard/leads' | 'dashboard/auto-reply' | 'dashboard/commerce'
+  | 'dashboard/routing' | 'dashboard/integrations' | 'dashboard/protocol'
   | 'settings/profile' | 'settings/organization' | 'settings/billing'
   | 'settings/team' | 'settings/notifications'
   | 'leads' | 'leads/detail' | 'leads/import'
@@ -24,6 +26,8 @@ const VALID: Page[] = [
   'onboarding',
   'dashboard', 'dashboard/inbox', 'dashboard/analytics', 'dashboard/drip',
   'dashboard/templates', 'dashboard/team', 'dashboard/settings',
+  'dashboard/leads', 'dashboard/auto-reply', 'dashboard/commerce',
+  'dashboard/routing', 'dashboard/integrations', 'dashboard/protocol',
   'settings/profile', 'settings/organization', 'settings/billing',
   'settings/team', 'settings/notifications',
   'leads', 'leads/detail', 'leads/import',
