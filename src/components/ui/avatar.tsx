@@ -37,18 +37,20 @@ function getInitials(name: string) {
 }
 
 export const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
-  ({ className, src, name, size = 'default', status, ...props }, ref) => {
+  ({ className, src, name, size = 'default', status, children, ...props }, ref) => {
     return (
       <div
         ref={ref}
         className={cn(
-          "relative inline-flex items-center justify-center rounded-full bg-surface-hover shrink-0",
+          "relative inline-flex items-center justify-center rounded-full bg-surface-hover shrink-0 overflow-hidden",
           sizeClasses[size],
           className
         )}
         {...props}
       >
-        {src ? (
+        {children ? (
+          children
+        ) : src ? (
           <img
             src={src}
             alt={name || "Avatar"}
@@ -74,3 +76,33 @@ export const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
   }
 );
 Avatar.displayName = "Avatar";
+
+export const AvatarImage = React.forwardRef<HTMLImageElement, React.ImgHTMLAttributes<HTMLImageElement>>(
+  ({ className, alt, ...props }, ref) => {
+    if (!props.src) return null;
+    return (
+      <img
+        ref={ref}
+        alt={alt || "Avatar"}
+        className={cn("h-full w-full object-cover rounded-full", className)}
+        {...props}
+      />
+    );
+  }
+);
+AvatarImage.displayName = "AvatarImage";
+
+export const AvatarFallback = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, children, ...props }, ref) => {
+    return (
+      <div
+        ref={ref}
+        className={cn("flex h-full w-full items-center justify-center rounded-full font-mono text-gold font-medium", className)}
+        {...props}
+      >
+        {children}
+      </div>
+    );
+  }
+);
+AvatarFallback.displayName = "AvatarFallback";

@@ -293,3 +293,9 @@ export const QuoteIcon = ({ size = 24, className = '' }: IconProps) => (
     <path d="M4 4h5v5H4v5H0V9C0 6.2 1.8 4 4 4zm12 0h5v5h-5v5h-4V9c0-2.8 1.8-5 4-5z" opacity="0.9" />
   </svg>
 )
+
+// ── Shield / Security
+export const ShieldIcon = ({ size = 16, strokeWidth = 1.5, className = '' }: IconProps) => base(size, strokeWidth,
+  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />, className
+)
+
