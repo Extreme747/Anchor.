@@ -25,12 +25,14 @@ import Commerce from './Commerce'
 import Routing from './Routing'
 import Integrations from './Integrations'
 import Protocol from './Protocol'
+import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Avatar } from '@/components/ui/avatar'
 import { Kbd } from '@/components/ui/kbd'
 import { CommandPalette } from '@/components/ui/command-palette'
 import { KeyboardHint } from '@/components/ui/keyboard-hint'
+import { ShortcutsModal } from '@/components/ui/shortcuts-modal'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 
 // ── Sidebar nav items
@@ -65,6 +67,7 @@ const tabContent: Record<string, React.ReactNode> = {
 export default function Dashboard() {
   const [activeNav, setActiveNav] = useState('inbox')
   const [isCommandOpen, setIsCommandOpen] = useState(false)
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false)
 
   // Global Keyboard Shortcuts (Cmd+K, Cmd+N, chords G->I, G->L, G->A, G->S, G->D)
   useKeyboardShortcuts({
@@ -184,9 +187,15 @@ export default function Dashboard() {
             <Inbox />
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto p-4">
+          <motion.div 
+            key={activeNav}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.16, ease: "easeOut" }}
+            className="flex-1 overflow-y-auto p-4"
+          >
             {tabContent[activeNav]}
-          </div>
+          </motion.div>
         )}
       </div>
 
@@ -195,6 +204,12 @@ export default function Dashboard() {
         open={isCommandOpen}
         onOpenChange={setIsCommandOpen}
         onNavigate={setActiveNav}
+      />
+
+      {/* Keyboard Cheatsheet Modal (?) */}
+      <ShortcutsModal
+        open={isShortcutsOpen}
+        onClose={() => setIsShortcutsOpen(false)}
       />
 
       {/* Floating Keyboard Shortcuts Hint */}

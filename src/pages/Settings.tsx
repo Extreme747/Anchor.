@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { CheckIcon, LockIcon, BellIcon, TeamIcon, ArrowRightIcon, BoltIcon, WarningIcon } from '../components/Icons'
 import { authApi } from '../api/client'
+import { toast } from '@/components/ui/toast'
 
 const inp = 'w-full bg-[#111] border border-white/10 text-[#F0EDE8] text-sm px-4 py-3 placeholder-[#444] focus:outline-none focus:border-[#C8953A] transition-colors'
 const lbl = 'font-mono text-[10px] text-[#6B6B6B] tracking-widest block mb-1.5'
@@ -158,9 +159,10 @@ function OrgSettings() {
         metaAccessToken: metaAccessToken || undefined,
       })
       setSaved(true)
+      toast.success('Workspace settings saved successfully!')
       setTimeout(() => setSaved(false), 3000)
     } catch (err: any) {
-      alert('Failed to save settings: ' + err.message)
+      toast.error('Failed to save settings: ' + err.message)
     } finally {
       setSaving(false)
     }
@@ -421,7 +423,7 @@ function TeamManagement() {
 
   const handleInvite = async () => {
     if (!inviteName.trim() || !inviteEmail.trim()) {
-      alert('Please fill out name and email')
+      toast.error('Please enter advisor name and email address')
       return
     }
     setIsInviting(true)
@@ -443,6 +445,7 @@ function TeamManagement() {
           leads: 0,
         },
       ])
+      toast.success(`Advisor invited! Temporary password: ${res.temporaryPassword || 'anchor123'}`)
       setInviteSuccess(`Invited! Temp password: ${res.temporaryPassword || 'anchor123'}`)
       setTimeout(() => {
         setInviteSuccess(null)
@@ -452,7 +455,7 @@ function TeamManagement() {
         setInvitePhone('')
       }, 4000)
     } catch (err: any) {
-      alert('Failed to invite member: ' + err.message)
+      toast.error('Failed to invite member: ' + err.message)
     } finally {
       setIsInviting(false)
     }

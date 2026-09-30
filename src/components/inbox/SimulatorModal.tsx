@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Bolt, Sparkles, CheckCircle2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { toast } from '@/components/ui/toast';
 import { simulatorApi } from '@/api/client';
 
 interface SimulatorModalProps {
@@ -31,12 +32,13 @@ export function SimulatorModal({ isOpen, onClose, onCreated }: SimulatorModalPro
         adHeadline: 'Luxury 3BHK Sector 62',
       });
       setResult(res);
+      toast.success('Inbound WhatsApp Lead successfully simulated & ingested!');
       setTimeout(() => {
         onCreated();
         onClose();
       }, 1000);
     } catch (err: any) {
-      alert('Error simulating lead: ' + (err?.message || 'Network error'));
+      toast.error('Error simulating lead: ' + (err?.message || 'Network error'));
     } finally {
       setLoading(false);
     }

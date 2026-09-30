@@ -11,6 +11,7 @@ import About from './pages/About'
 import Blog from './pages/Blog'
 import Auth from './pages/Auth'
 import Legal from './pages/Legal'
+import { Toaster } from '@/components/ui/toast'
 
 function AppShell() {
   const { page } = useRouter()
@@ -46,6 +47,7 @@ export default function App() {
   return (
     <RouterProvider>
       <AppShell />
+      <Toaster />
     </RouterProvider>
   )
 }

@@ -4,6 +4,7 @@ import {
   ClockIcon, WarningIcon, TagIcon, SendIcon,
 } from '../components/Icons'
 import { templatesApi } from '../api/client'
+import { toast } from '@/components/ui/toast'
 
 // ── Types
 type TemplateStatus = 'APPROVED' | 'PENDING' | 'REJECTED'
@@ -187,11 +188,11 @@ function TemplateEditor({
 
   const handleSubmit = async (isDraft = false) => {
     if (!name.trim()) {
-      alert('Please enter a template name')
+      toast.error('Please enter a template name')
       return
     }
     if (!body.trim()) {
-      alert('Please enter message body')
+      toast.error('Please enter message body')
       return
     }
     setIsSubmitting(true)
@@ -207,9 +208,10 @@ function TemplateEditor({
         buttons,
         metaStatus: isDraft ? 'PENDING' : 'APPROVED',
       })
+      toast.success(isDraft ? 'Template saved as draft' : 'Template submitted for Meta review!')
       onBack()
     } catch (err: any) {
-      alert('Failed to save template: ' + err.message)
+      toast.error('Failed to save template: ' + err.message)
     } finally {
       setIsSubmitting(false)
     }

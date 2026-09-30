@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { BoltIcon, CheckIcon, ClockIcon, ArrowRightIcon, WarningIcon } from '../components/Icons'
 import { autoReplyApi, authApi } from '../api/client'
+import { toast } from '@/components/ui/toast'
 
 export interface Rule {
   id: string | number
@@ -79,9 +80,10 @@ function RuleModal({ rule, onClose, onSave }: { rule?: Rule; onClose: () => void
         dedupSeconds: dedup,
         enabled: rule ? rule.enabled : true,
       })
+      toast.success('Auto-reply rule saved successfully!')
       onClose()
     } catch (err: any) {
-      alert('Failed to save rule: ' + err.message)
+      toast.error('Failed to save rule: ' + err.message)
     } finally {
       setIsSaving(false)
     }

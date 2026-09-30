@@ -3,6 +3,7 @@ import {
   BoltIcon, CheckIcon, WarningIcon, ClockIcon, LockIcon,
   RupeeSymbol, ArrowRightIcon, ShieldIcon
 } from '../components/Icons'
+import { toast } from '@/components/ui/toast'
 
 // ── Types for Phase 0
 export interface WebhookEvent {
@@ -209,7 +210,10 @@ export default function Protocol() {
                   style={{ borderRadius: 2 }}
                 />
                 <button
-                  onClick={() => alert('Webhook URL copied to clipboard!')}
+                  onClick={() => {
+                    navigator.clipboard?.writeText('https://api.anchor.io/v1/webhook/meta')
+                    toast.success('Webhook URL copied to clipboard!')
+                  }}
                   className="px-3 py-2 bg-[#C8953A] text-[#080808] font-mono text-[10px] font-semibold"
                   style={{ borderRadius: 2 }}
                 >
