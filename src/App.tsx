@@ -24,7 +24,7 @@ function AppShell() {
   if (page === 'dashboard' || page.startsWith('dashboard/')) return <Dashboard />
 
   return (
-    <div className="min-h-screen bg-[#080808] text-[#F0EDE8]">
+    <div className="min-h-screen bg-canvas text-primary">
       <Nav />
       <main>
         {page === 'home' && <Home />}

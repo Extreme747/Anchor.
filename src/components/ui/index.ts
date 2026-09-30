@@ -1,0 +1,13 @@
+// Anchor UI Design System — Obsidian Luxury
+// Barrel export for all UI primitives
+
+export { Button, type ButtonProps } from './button'
+export { Badge, type BadgeProps } from './badge'
+export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, type CardProps } from './card'
+export { Modal, ModalTrigger, ModalClose, ModalContent, ModalHeader, ModalFooter, ModalTitle, ModalDescription, ModalOverlay, ModalPortal } from './modal'
+export { Input, type InputProps } from './input'
+export { Tabs, TabsList, TabsTrigger, TabsContent } from './tabs'
+export { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from './tooltip'
+export { Skeleton } from './skeleton'
+export { Avatar, type AvatarProps } from './avatar'
+export { Kbd, type KbdProps } from './kbd'
