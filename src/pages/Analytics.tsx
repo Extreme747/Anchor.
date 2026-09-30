@@ -1,36 +1,17 @@
 import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import { WarningIcon, ArrowRightIcon, CheckIcon, AnalyticsIcon, TeamIcon } from '../components/Icons'
 import { analyticsApi, messagesApi } from '../api/client'
+import { cn } from '@/lib/utils'
+import { InteractiveLineChart } from '@/components/ui/chart'
 
-// ── Shared SVG charts
-function LineChart({ data, color = '#C8953A', height = 100 }: { data: number[]; color?: string; height?: number }) {
-  const w = 480; const pad = 24
-  const max = Math.max(...data); const min = Math.min(...data)
-  const range = max - min || 1
-  const pts = data.map((v, i) => ({
-    x: pad + (i / (data.length - 1)) * (w - pad * 2),
-    y: height - pad - ((v - min) / range) * (height - pad * 2),
+// ── Interactive SVG charts
+function LineChart({ data, color = '#C8953A', height = 120, labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] }: { data: number[]; color?: string; height?: number; labels?: string[] }) {
+  const chartData = data.map((v, i) => ({
+    label: labels[i] || `P${i + 1}`,
+    value: v,
   }))
-  const pathD = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')
-  const areaD = `${pathD} L ${pts[pts.length - 1].x} ${height - pad} L ${pts[0].x} ${height - pad} Z`
-  const id = `grad-${color.replace('#', '')}`
-  return (
-    <svg viewBox={`0 0 ${w} ${height}`} className="w-full" style={{ height }}>
-      <defs>
-        <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.2" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      {[0.25, 0.5, 0.75].map(f => {
-        const y = height - pad - f * (height - pad * 2)
-        return <line key={f} x1={pad} x2={w - pad} y1={y} y2={y} stroke="rgba(255,255,255,0.04)" strokeWidth="1" />
-      })}
-      <path d={areaD} fill={`url(#${id})`} />
-      <path d={pathD} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      {pts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="3" fill={color} stroke="#080808" strokeWidth="2" />)}
-    </svg>
-  )
+  return <InteractiveLineChart data={chartData} color={color} height={height} />
 }
 
 function BarChart({ data, labels, color = '#C8953A' }: { data: number[]; labels: string[]; color?: string }) {
@@ -632,14 +613,29 @@ export default function Analytics() {
 
   return (
     <div>
-      <div className="flex gap-1 border-b border-white/8 mb-6 -mt-1 overflow-x-auto">
-        {tabs.map(t => (
-          <button key={t.id} onClick={() => setActiveTab(t.id)}
-            className="px-4 py-2.5 font-mono text-[10px] tracking-wide transition-colors border-b-2 -mb-px flex-shrink-0"
-            style={{ borderColor: activeTab === t.id ? '#C8953A' : 'transparent', color: activeTab === t.id ? '#C8953A' : '#6B6B6B' }}>
-            {t.label.toUpperCase()}
-          </button>
-        ))}
+      <div className="flex gap-1.5 p-1 bg-surface-sub rounded-md border border-border mb-6 -mt-1 overflow-x-auto scrollbar-hide">
+        {tabs.map(t => {
+          const isActive = activeTab === t.id
+          return (
+            <button
+              key={t.id}
+              onClick={() => setActiveTab(t.id)}
+              className={cn(
+                "relative z-10 px-3.5 py-1.5 font-mono text-[11px] font-medium rounded-sm transition-colors whitespace-nowrap",
+                isActive ? "text-black font-semibold" : "text-tertiary hover:text-primary hover:bg-surface-hover/50"
+              )}
+            >
+              {isActive && (
+                <motion.div
+                  layoutId="active-analytics-tab"
+                  className="absolute inset-0 bg-accent rounded-sm -z-10 shadow-sm"
+                  transition={{ type: "spring", stiffness: 350, damping: 28 }}
+                />
+              )}
+              {t.label}
+            </button>
+          )
+        })}
       </div>
       {activeTab === 'overview' && <MainDashboard />}
       {activeTab === 'leakage' && <RevenuLeakage />}
