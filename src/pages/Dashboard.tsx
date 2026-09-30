@@ -29,6 +29,9 @@ import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Avatar } from '@/components/ui/avatar'
 import { Kbd } from '@/components/ui/kbd'
+import { CommandPalette } from '@/components/ui/command-palette'
+import { KeyboardHint } from '@/components/ui/keyboard-hint'
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 
 // ── Sidebar nav items
 const sidebarItems = [
@@ -61,6 +64,13 @@ const tabContent: Record<string, React.ReactNode> = {
 
 export default function Dashboard() {
   const [activeNav, setActiveNav] = useState('inbox')
+  const [isCommandOpen, setIsCommandOpen] = useState(false)
+
+  // Global Keyboard Shortcuts (Cmd+K, Cmd+N, chords G->I, G->L, G->A, G->S, G->D)
+  useKeyboardShortcuts({
+    onNavigate: setActiveNav,
+    onOpenCommandPalette: () => setIsCommandOpen(true),
+  })
 
   return (
     <div className="flex h-screen bg-canvas overflow-hidden">
@@ -110,7 +120,10 @@ export default function Dashboard() {
         </nav>
 
         {/* Cmd+K hint */}
-        <div className="hidden md:flex items-center gap-2 mx-3 mb-2 px-2.5 py-2 rounded-sm bg-surface-hover/50 border border-border cursor-pointer hover:border-border-strong transition-colors">
+        <div 
+          onClick={() => setIsCommandOpen(true)}
+          className="hidden md:flex items-center gap-2 mx-3 mb-2 px-2.5 py-2 rounded-sm bg-surface-hover/50 border border-border cursor-pointer hover:border-border-strong transition-colors"
+        >
           <Command size={12} className="text-tertiary" />
           <span className="text-[11px] text-tertiary">Search...</span>
           <span className="ml-auto"><Kbd keys={["⌘", "K"]} /></span>
@@ -176,6 +189,16 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* Global Command Palette (Cmd+K) */}
+      <CommandPalette
+        open={isCommandOpen}
+        onOpenChange={setIsCommandOpen}
+        onNavigate={setActiveNav}
+      />
+
+      {/* Floating Keyboard Shortcuts Hint */}
+      <KeyboardHint onOpenCommandPalette={() => setIsCommandOpen(true)} />
     </div>
   )
 }

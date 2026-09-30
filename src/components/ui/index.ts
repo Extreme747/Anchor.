@@ -11,3 +11,5 @@ export { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from './tool
 export { Skeleton } from './skeleton'
 export { Avatar, AvatarImage, AvatarFallback, type AvatarProps } from './avatar'
 export { Kbd, type KbdProps } from './kbd'
+export { CommandPalette } from './command-palette'
+export { InteractiveLineChart } from './chart'
